@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=78,<85", "wheel>=0.45,<1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "retentionops"
+version = "0.1.0.dev1"
+description = "A local-testable customer churn intelligence platform"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "numpy>=1.26,<3",
+  "scikit-learn>=1.5,<2",
+  "joblib>=1.4,<2",
+  "pydantic>=2.9,<3",
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<10", "httpx>=0.27,<1", "ruff>=0.9,<1", "pip-audit>=2.9,<3",
+  "setuptools>=78,<85", "wheel>=0.45,<1",
+]
+
+[project.scripts]
+retentionops = "retentionops.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+retentionops = ["dashboard.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["RetentionOps_Execution_Kit_2026-11-04"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]

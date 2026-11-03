@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "accepted_by_local_demo": "Project-generated SYNTHETIC snapshots only",
+  "public_demo_mode": "SYNTHETIC",
+  "external_data_accessed": false,
+  "kkbox": {
+    "status": "BLOCKED_PENDING_RIGHTS_REVIEW",
+    "official_rules": "https://www.kaggle.com/competitions/kkbox-churn-prediction-challenge/rules",
+    "terms_read_and_accepted": false,
+    "cloud_processing_approved": false,
+    "raw_redistribution_approved": false
+  },
+  "source_release_required_fields": [
+    "source_release_id", "dataset_sha256", "schema_version",
+    "source_type", "rights", "rows", "cutoffs"
+  ]
+}

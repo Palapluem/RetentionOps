@@ -1,0 +1,225 @@
+{
+  "model_version": "synthetic-logreg-a5f4db76feefffe0edc23900e7ef16596f8d59b77420a7a4cb5245cbce611a84",
+  "model_sha256": "320564484051a3a43b41470508965191e95bb5b8b705c9ab36110049d3a75e12",
+  "identity": {
+    "dataset_sha256": "15a5fe29afa720c70276e16a771fd3912bf85bd1943a02fbadf7cc3896c22760",
+    "implementation_sha256": "18dfd3b7090491532ae010ac1e5088a8860629b721c065a14b801394ace55a90",
+    "feature_schema_sha256": "4116a02ad076e379344c89d42a8b43497a35b2041370b53beb741d189ffddaf1",
+    "packages": {
+      "numpy": "2.4.6",
+      "scipy": "1.17.1",
+      "scikit-learn": "1.9.1",
+      "joblib": "1.6.0",
+      "pydantic": "2.14.2",
+      "fastapi": "0.162.0"
+    },
+    "python": "3.11.18",
+    "runtime": {
+      "system": "Darwin",
+      "machine": "arm64"
+    },
+    "evaluation_freeze": "2026-11-03",
+    "config": {
+      "seed": 342,
+      "C": 1.0,
+      "max_iter": 500,
+      "protocol": "temporal-v1"
+    }
+  },
+  "trained_at": "2026-11-03T10:13:46.180661+00:00",
+  "evaluation_freeze": "2026-11-03",
+  "source_type": "SYNTHETIC",
+  "not_real_world_performance": true,
+  "source": {
+    "source_release_id": "synthetic-15a5fe29afa720c70276e16a771fd3912bf85bd1943a02fbadf7cc3896c22760",
+    "dataset_sha256": "15a5fe29afa720c70276e16a771fd3912bf85bd1943a02fbadf7cc3896c22760",
+    "schema_version": "synthetic-snapshot-v1",
+    "source_type": "SYNTHETIC",
+    "rights": "Project-generated synthetic snapshots; no external customer dataset",
+    "rows": 2600,
+    "cutoffs": [
+      "2026-06-30",
+      "2026-07-31",
+      "2026-08-31",
+      "2026-09-30"
+    ]
+  },
+  "cohorts": {
+    "train": {
+      "rows": 1300,
+      "cutoffs": [
+        "2026-06-30",
+        "2026-07-31"
+      ],
+      "max_label_available_at": "2026-08-30"
+    },
+    "validation": {
+      "rows": 650,
+      "cutoffs": [
+        "2026-08-31"
+      ],
+      "max_label_available_at": "2026-09-30"
+    },
+    "test": {
+      "rows": 650,
+      "cutoffs": [
+        "2026-09-30"
+      ],
+      "max_label_available_at": "2026-10-30"
+    }
+  },
+  "metrics": {
+    "validation": {
+      "logistic_regression": {
+        "average_precision": 0.4398436447213274,
+        "roc_auc": 0.8088079125455492,
+        "log_loss": 0.31090680753465383,
+        "brier": 0.09304725674210858,
+        "precision_at_10pct": 0.4153846153846154,
+        "recall_at_10pct": 0.3176470588235294,
+        "selected_k": 65,
+        "rows": 650,
+        "positives": 85,
+        "positive_rate": 0.13076923076923078,
+        "calibration": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 513,
+            "mean_predicted": 0.07421059051335095,
+            "observed_rate": 0.06627680311890838
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 108,
+            "mean_predicted": 0.2731821386347933,
+            "observed_rate": 0.3148148148148148
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6,
+            "count": 20,
+            "mean_predicted": 0.48446838610766524,
+            "observed_rate": 0.55
+          },
+          {
+            "lower": 0.6,
+            "upper": 0.8,
+            "count": 8,
+            "mean_predicted": 0.6907174378095178,
+            "observed_rate": 0.625
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 1,
+            "mean_predicted": 0.8056234227880426,
+            "observed_rate": 1.0
+          }
+        ]
+      },
+      "constant_prior": {
+        "average_precision": 0.13076923076923078,
+        "roc_auc": 0.5,
+        "log_loss": 0.3879710254557884,
+        "brier": 0.11369763313609466,
+        "precision_at_10pct": 0.2,
+        "recall_at_10pct": 0.15294117647058825,
+        "selected_k": 65,
+        "rows": 650,
+        "positives": 85,
+        "positive_rate": 0.13076923076923078,
+        "calibration": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 650,
+            "mean_predicted": 0.13615384615384615,
+            "observed_rate": 0.13076923076923078
+          }
+        ]
+      }
+    },
+    "test": {
+      "logistic_regression": {
+        "average_precision": 0.46218375154134056,
+        "roc_auc": 0.8308112800300301,
+        "log_loss": 0.27500717962429766,
+        "brier": 0.08052657793073184,
+        "precision_at_10pct": 0.4307692307692308,
+        "recall_at_10pct": 0.3783783783783784,
+        "selected_k": 65,
+        "rows": 650,
+        "positives": 74,
+        "positive_rate": 0.11384615384615385,
+        "calibration": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 535,
+            "mean_predicted": 0.07449979413394495,
+            "observed_rate": 0.0616822429906542
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 79,
+            "mean_predicted": 0.26410300219316285,
+            "observed_rate": 0.27848101265822783
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6,
+            "count": 27,
+            "mean_predicted": 0.4738871203880746,
+            "observed_rate": 0.4074074074074074
+          },
+          {
+            "lower": 0.6,
+            "upper": 0.8,
+            "count": 7,
+            "mean_predicted": 0.6667335881592235,
+            "observed_rate": 0.8571428571428571
+          },
+          {
+            "lower": 0.8,
+            "upper": 1.0,
+            "count": 2,
+            "mean_predicted": 0.8718626650629522,
+            "observed_rate": 1.0
+          }
+        ]
+      },
+      "constant_prior": {
+        "average_precision": 0.11384615384615385,
+        "roc_auc": 0.5,
+        "log_loss": 0.3567037924653103,
+        "brier": 0.10138284023668637,
+        "precision_at_10pct": 0.15384615384615385,
+        "recall_at_10pct": 0.13513513513513514,
+        "selected_k": 65,
+        "rows": 650,
+        "positives": 74,
+        "positive_rate": 0.11384615384615385,
+        "calibration": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 650,
+            "mean_predicted": 0.13615384615384615,
+            "observed_rate": 0.11384615384615385
+          }
+        ]
+      }
+    }
+  },
+  "limitations": [
+    "Synthetic historical holdout, not prospective live inference",
+    "Simulated labels are not the KKBox subscription-renewal definition",
+    "Repeated customers across cohorts; not unseen-customer evaluation",
+    "Predictive probabilities do not measure campaign uplift"
+  ],
+  "observed_at_bangkok": "2026-11-03T17:19:38.157600+07:00",
+  "dependency_lock_sha256": "9c72393034ba56e30cab682fcd31c2c7e70e2479139c9c863519addf0119ed75"
+}

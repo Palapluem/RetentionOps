@@ -1,0 +1,25 @@
+{
+  "observed_at_bangkok": "2026-11-03T17:19:38.157600+07:00",
+  "tool": "agent-browser 0.38.2 / Chrome for Testing 154.0.8037.92",
+  "normal_api_rows": 20,
+  "descending_risk": true,
+  "mobile_viewport_width": 390,
+  "mobile_document_width": 390,
+  "api_error_observed": true,
+  "retry_restored_data": true,
+  "empty_state_test": "UI-only mocked risk response; 0 rows and explanatory message observed",
+  "desktop_accessibility": {
+    "axe_version": "4.12.1",
+    "inapplicable": 49,
+    "incomplete": 0,
+    "passes": 40,
+    "violations": 0
+  },
+  "mobile_accessibility": {
+    "axe_version": "4.12.1",
+    "inapplicable": 49,
+    "incomplete": 0,
+    "passes": 40,
+    "violations": 0
+  }
+}

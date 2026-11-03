@@ -1,0 +1,19 @@
+services:
+  pipeline:
+    build: .
+    command: ["retentionops", "all", "--root", "/workspace"]
+    volumes:
+      - demo:/workspace
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - demo:/workspace:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+volumes:
+  demo:

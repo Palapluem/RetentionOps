@@ -1,0 +1,21 @@
+{
+  "version": "synthetic-snapshot-v1",
+  "grain": ["customer_id", "as_of_date"],
+  "source_type": "SYNTHETIC",
+  "feature_origin": "Simulated snapshot values, not event-derived aggregates",
+  "features": [
+    "active_days_30d",
+    "payment_failures_90d",
+    "tenure_months",
+    "monthly_fee",
+    "auto_renew"
+  ],
+  "forbidden_model_inputs": [
+    "customer_id", "as_of_date", "churn_30d", "label_available_at",
+    "feature_max_event_at", "source_max_available_at", "source_type"
+  ],
+  "temporal_rule": "feature_max_event_at <= source_max_available_at <= as_of_date",
+  "label_horizon_days": 30,
+  "label_rule": "Seeded simulated Bernoulli churn within 30 days; not KKBox semantics",
+  "maturity_rule": "label_available_at <= explicit evaluation freeze"
+}
