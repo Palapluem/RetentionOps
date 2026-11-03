@@ -1,0 +1,91 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "customer_id": {
+      "pattern": "^SYN-[0-9]{5,7}$",
+      "title": "Customer Id",
+      "type": "string"
+    },
+    "as_of_date": {
+      "format": "date",
+      "title": "As Of Date",
+      "type": "string"
+    },
+    "active_days_30d": {
+      "maximum": 30,
+      "minimum": 0,
+      "title": "Active Days 30D",
+      "type": "integer"
+    },
+    "payment_failures_90d": {
+      "maximum": 90,
+      "minimum": 0,
+      "title": "Payment Failures 90D",
+      "type": "integer"
+    },
+    "tenure_months": {
+      "maximum": 1200,
+      "minimum": 1,
+      "title": "Tenure Months",
+      "type": "integer"
+    },
+    "monthly_fee": {
+      "exclusiveMinimum": 0,
+      "maximum": 10000,
+      "title": "Monthly Fee",
+      "type": "number"
+    },
+    "auto_renew": {
+      "enum": [
+        0,
+        1
+      ],
+      "title": "Auto Renew",
+      "type": "integer"
+    },
+    "feature_max_event_at": {
+      "format": "date",
+      "title": "Feature Max Event At",
+      "type": "string"
+    },
+    "source_max_available_at": {
+      "format": "date",
+      "title": "Source Max Available At",
+      "type": "string"
+    },
+    "churn_30d": {
+      "enum": [
+        0,
+        1
+      ],
+      "title": "Churn 30D",
+      "type": "integer"
+    },
+    "label_available_at": {
+      "format": "date",
+      "title": "Label Available At",
+      "type": "string"
+    },
+    "source_type": {
+      "const": "SYNTHETIC",
+      "title": "Source Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "customer_id",
+    "as_of_date",
+    "active_days_30d",
+    "payment_failures_90d",
+    "tenure_months",
+    "monthly_fee",
+    "auto_renew",
+    "feature_max_event_at",
+    "source_max_available_at",
+    "churn_30d",
+    "label_available_at",
+    "source_type"
+  ],
+  "title": "Snapshot",
+  "type": "object"
+}

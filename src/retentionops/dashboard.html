@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RetentionOps | Historical risk review</title>
+  <style>
+    :root{font-family:"Avenir Next",Avenir,system-ui,sans-serif;color:#14283f;background:#f8fafc;font-variant-numeric:tabular-nums}
+    *{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}header,main,footer{max-width:1180px;margin:auto;padding:24px 32px}
+    header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #d6e0ec}
+    .brand{font-size:22px;font-weight:750;letter-spacing:-.5px}.badge{color:#805000;background:#fff1cc;padding:7px 12px;border-radius:5px;font-size:13px;font-weight:650}
+    h1{font-size:clamp(28px,4vw,40px);letter-spacing:-1px;margin:12px 0}h2{font-size:20px;margin:0 0 16px}
+    p{line-height:1.6;max-width:75ch}.muted,dt{color:#52647b}.intro{margin-bottom:32px}
+    .layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:40px}section{min-width:0}
+    .table-scroll{overflow:auto}table{width:100%;border-collapse:collapse;text-align:left;font-size:14px}
+    caption{text-align:left;color:#52647b;padding:0 0 12px;font-size:13px}th,td{padding:14px 10px;border-bottom:1px solid #d6e0ec;white-space:nowrap}th{color:#52647b;font-weight:600}
+    .bar{display:inline-block;width:80px;height:6px;background:#e2eaf5;margin-left:14px;vertical-align:middle;border-radius:3px;overflow:hidden}.fill{display:block;height:100%;background:#2359b8}
+    aside{background:#eaf1fc;padding:22px;border-radius:8px;align-self:start}dl{margin:0}dt{font-size:13px;margin-top:16px}dd{margin:4px 0 0;font-weight:650;overflow-wrap:anywhere}aside p{font-size:13px}
+    #status{color:#52647b;margin:16px 0}button{border:1px solid #2359b8;background:white;color:#2359b8;border-radius:5px;padding:8px 16px;cursor:pointer;font:inherit}button:hover{background:#eaf1fc}button:focus-visible,a:focus-visible{outline:3px solid #2359b8;outline-offset:4px}
+    a{color:#2359b8}footer{font-size:13px;color:#52647b;padding-top:48px}
+    @media(max-width:780px){header,main,footer{padding:20px}.layout{grid-template-columns:1fr;gap:24px}.bar{width:40px}aside{width:100%}.badge{font-size:12px}th,td{padding:12px 7px}}
+  </style>
+</head>
+<body>
+  <header><span class="brand">RetentionOps</span><span class="badge">Synthetic demo</span></header>
+  <main>
+    <div class="intro"><h1>Historical risk review</h1><p class="muted">Review a simulated subscriber cohort, ranked by predicted churn probability. These results demonstrate the workflow and do not measure real customer performance.</p></div>
+    <p id="status" role="status" aria-live="polite">Loading published results…</p>
+    <button id="retry" type="button" hidden>Retry</button>
+    <div class="layout" id="results" hidden>
+      <section aria-labelledby="risk-title"><h2 id="risk-title">Subscribers to review</h2><div class="table-scroll"><table>
+        <caption id="caption"></caption>
+        <thead><tr><th scope="col">Subscriber</th><th scope="col">Cohort cutoff</th><th scope="col">Churn probability</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div></section>
+      <aside aria-labelledby="evaluation-title"><h2 id="evaluation-title">Model evaluation</h2><dl id="metrics"></dl><p>Average precision summarizes the precision–recall curve. The constant baseline predicts the training churn rate for every subscriber.</p><p id="lineage"></p><p>Risk is predictive. It does not estimate how many customers a campaign would save.</p></aside>
+    </div>
+  </main>
+  <footer>Local workflow preview. Product dashboard and cloud delivery remain in development. <a href="/docs">API reference</a></footer>
+  <script>
+    const status = document.getElementById('status');
+    const retry = document.getElementById('retry');
+    async function request(path) {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error(`Request failed (${response.status})`);
+      return response.json();
+    }
+    async function load() {
+      retry.hidden = true;
+      status.textContent = 'Loading published results…';
+      document.getElementById('results').hidden = true;
+      try {
+        const [m, r] = await Promise.all([request('/api/v1/overview'), request('/api/v1/risk')]);
+        if (m.model_version !== r.model_version) throw new Error('Publication changed; retry to refresh');
+        document.getElementById('rows').replaceChildren();
+        for (const row of r.items) {
+          const tr = document.createElement('tr');
+          for (const text of [row.customer_id, row.as_of_date, `${(row.churn_probability * 100).toFixed(1)}%`]) {
+            const td = document.createElement('td'); td.textContent = text; tr.append(td);
+          }
+          const bar = document.createElement('span'); bar.className = 'bar'; bar.setAttribute('aria-hidden', 'true');
+          const fill = document.createElement('span'); fill.className = 'fill'; fill.style.width = `${row.churn_probability * 100}%`;
+          bar.append(fill); tr.lastChild.append(bar); document.getElementById('rows').append(tr);
+        }
+        document.getElementById('caption').textContent = `Top ${r.items.length} of ${r.total} simulated subscribers · ${m.score_cutoff}`;
+        const metrics = document.getElementById('metrics'); metrics.replaceChildren();
+        for (const [name, value] of [['Average precision', m.average_precision.toFixed(3)], ['Constant baseline', m.baseline_average_precision.toFixed(3)], ['ROC-AUC', m.roc_auc.toFixed(3)], ['Brier score', m.brier.toFixed(3)], ['Recall at top 10%', `${(m.recall_at_10pct * 100).toFixed(1)}%`]]) {
+          const dt = document.createElement('dt'); dt.textContent = name;
+          const dd = document.createElement('dd'); dd.textContent = value; metrics.append(dt, dd);
+        }
+        document.getElementById('lineage').textContent = `Model ${m.model_version.slice(0, 29)}… Trained ${new Date(m.trained_at).toLocaleString()}. Data cutoff ${m.score_cutoff}; this is a historical cohort.`;
+        status.textContent = r.items.length ? `Published cohort: ${m.customers} subscribers. All data is synthetic.` : 'No subscribers in this selection.';
+        document.getElementById('results').hidden = false;
+      } catch (error) {
+        status.textContent = `Results are unavailable. ${error.message}. Publish a valid local pipeline run, then retry.`;
+        retry.hidden = false;
+      }
+    }
+    retry.addEventListener('click', load);
+    load();
+  </script>
+</body>
+</html>
