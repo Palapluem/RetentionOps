@@ -6,11 +6,11 @@ Implementation PRs remain unmerged until owner review of their GitHub diffs and 
 
 ## Implemented locally; awaiting review and merge
 
-- [ROP-001 — Engineering foundation and verified synthetic vertical slice](https://github.com/Palapluem/RetentionOps/issues/1)
+- [ROP-001 — Establish engineering foundation and verified synthetic vertical slice](https://github.com/Palapluem/RetentionOps/issues/1)
   — PR #4, ready for review.
 - [ROP-003 — Derive synthetic features from subscription events with point-in-time tests](https://github.com/Palapluem/RetentionOps/issues/3)
   — PR #8, ready for review; includes label-correction maturity and multi-attempt count fixes.
-- [ROP-007 — Build an API-backed Next.js retention analyst workspace](https://github.com/Palapluem/RetentionOps/issues/7)
+- [Build an API-backed Next.js retention analyst workspace](https://github.com/Palapluem/RetentionOps/issues/7)
   — PR #9, stacked on the event PR; local browser and container evidence is recorded.
 
 The branches are ordered foundation → event features → analyst workspace. Review each PR on
