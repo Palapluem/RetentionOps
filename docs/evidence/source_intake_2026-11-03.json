@@ -33,13 +33,13 @@
     "rights": "Synthetic-only local intake; real customer sources are not approved by this contract"
   },
   "feature_manifest": {
-    "feature_release_id": "7b66e6c3e84953133a2239280663b617c38b3a1af9d9702ed9d8c41587f30c4e",
+    "feature_release_id": "98d0908b39df17cec856ce1e576812c204f5fff76fffd96785436306bbe3077d",
     "identity": {
       "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
       "dataset_sha256": "cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
       "freeze": "2026-11-03",
       "schema_version": "event-features-v1",
-      "implementation_sha256": "54ab11b9a8862e7b279706f389460d564b02a3dbb4a4bb965c09096af23db517",
+      "implementation_sha256": "6ddd51b099f7b6306ce57f4776c94995bb5ec422488ae10929e91c9792d84a2a",
       "polars_version": "1.44.2"
     },
     "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
@@ -63,10 +63,10 @@
     "source_type": "SYNTHETIC"
   },
   "model": {
-    "version": "synthetic-logreg-ef6cf634abd8f0c37281fd7842a33a277acfe2384b5af1b98564a7e5932129aa",
+    "version": "synthetic-logreg-87657f7f6a092c8930b5019ff43a7167c8807813c805f074dfe4e1bbcd9ee531",
     "sha256": "c339287fc0a017cdc1a579bb971eb2b7185f1e772a6f24047780dab61ee8dca5",
     "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
-    "source_manifest_sha256": "a3dea635647beda68cd276d50015d9d3d3dc3ba418f108ea0e79428d75e5759c"
+    "source_manifest_sha256": "629d23f483cafff61b9d01df1bc64983c3c81fd3aa261c1bb6ad85afc5d37265"
   },
   "cohorts": {
     "train": {

@@ -11,7 +11,7 @@ Created follow-ups:
 and [Derive synthetic features from subscription events with point-in-time tests](https://github.com/Palapluem/RetentionOps/issues/3).
 The local intake follow-up [Add replayable local event-source ingestion](https://github.com/Palapluem/RetentionOps/issues/10)
 now separates source generation, quality-gated intake, and replayable feature/model execution;
-it remains under PR review.
+it is under review in [PR #11](https://github.com/Palapluem/RetentionOps/pull/11).
 
 | Planned period | Next deliverable | Dependency / acceptance |
 |---|---|---|

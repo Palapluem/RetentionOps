@@ -151,6 +151,16 @@ _SOURCE_ID = re.compile(r"^[a-z][a-z0-9-]{0,39}$")
 _RELEASE_ID = re.compile(r"^(?P<source>[a-z][a-z0-9-]{0,39})-(?P<identity>[0-9a-f]{64})$")
 
 
+def _source_identity(source_id: str, checksum: str, complete_through: date) -> dict:
+    return {
+        "source_id": source_id,
+        "sha256": checksum,
+        "source_type": "SYNTHETIC",
+        "schema_version": "subscription-events-v1",
+        "complete_through": str(complete_through),
+    }
+
+
 def ingest_event_source(
     source_path: Path, root: Path, source_id: str, complete_through: date
 ) -> dict:
@@ -176,13 +186,7 @@ def ingest_event_source(
         events = read_event_jsonl(staged_source)
         quality = event_quality_report(events, complete_through)
         checksum = sha256_file(staged_source)
-        identity = {
-            "source_id": source_id,
-            "sha256": checksum,
-            "source_type": "SYNTHETIC",
-            "schema_version": "subscription-events-v1",
-            "complete_through": str(complete_through),
-        }
+        identity = _source_identity(source_id, checksum, complete_through)
         release_id = f"{source_id}-{canonical_hash(identity)}"
         manifest = {
             "source_release_id": release_id,
@@ -213,41 +217,28 @@ def load_event_source(root: Path, source_release_id: str) -> tuple[list[Event], 
     if not source.is_file() or sha256_file(source) != manifest.get("sha256"):
         raise ValueError("Event source release checksum does not match its manifest")
     events = read_event_jsonl(source)
+    source_id = manifest.get("source_id")
     if (
         manifest.get("source_release_id") != source_release_id
-        or manifest.get("source_id") != release_match.group("source")
+        or source_id != release_match.group("source")
         or manifest.get("source_type") != "SYNTHETIC"
         or manifest.get("schema_version") != "subscription-events-v1"
-        or manifest.get("identity")
-        != {
-            "source_id": manifest.get("source_id"),
-            "sha256": manifest.get("sha256"),
-            "source_type": manifest.get("source_type"),
-            "schema_version": manifest.get("schema_version"),
-            "complete_through": manifest.get("complete_through"),
-        }
-        or canonical_hash(manifest["identity"]) != release_match.group("identity")
     ):
         raise ValueError("Event source release identity or contract does not match its manifest")
     try:
         complete_through = date.fromisoformat(manifest["complete_through"])
     except (KeyError, TypeError, ValueError) as exc:
         raise ValueError("Event source manifest has an invalid completeness watermark") from exc
+    identity = _source_identity(source_id, manifest.get("sha256"), complete_through)
+    if manifest.get("identity") != identity or canonical_hash(identity) != release_match.group(
+        "identity"
+    ):
+        raise ValueError("Event source release identity or contract does not match its manifest")
     quality = event_quality_report(events, complete_through)
     expected_manifest = {
         "source_release_id": source_release_id,
-        "identity": {
-            "source_id": manifest.get("source_id"),
-            "sha256": manifest.get("sha256"),
-            "source_type": manifest.get("source_type"),
-            "schema_version": manifest.get("schema_version"),
-            "complete_through": manifest.get("complete_through"),
-        },
-        "source_id": manifest.get("source_id"),
-        "sha256": manifest.get("sha256"),
-        "source_type": manifest.get("source_type"),
-        "schema_version": manifest.get("schema_version"),
-        "complete_through": manifest.get("complete_through"),
+        "identity": identity,
+        **identity,
         "rows": len(events),
         "quality": quality,
         "rights": "Synthetic-only local intake; real customer sources are not approved by this contract",

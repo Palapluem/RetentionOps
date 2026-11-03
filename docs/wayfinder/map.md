@@ -15,7 +15,8 @@ codebase-design, find-docs, frontend-design and React/Next.js best practices. Co
 local implementation while source rights and paid cloud approval remain external gates.
 Stack feature PRs on the reviewed foundation; preserve the original local Execution Kit.
 The local source-intake extension is tracked as
-[Add replayable local event-source ingestion](https://github.com/Palapluem/RetentionOps/issues/10).
+[Add replayable local event-source ingestion](https://github.com/Palapluem/RetentionOps/issues/10)
+and is under review in [PR #11](https://github.com/Palapluem/RetentionOps/pull/11).
 It is synthetic-only; a real-data adapter and GCS/BigQuery execution require separate rights
 and cloud readiness decisions.
 
