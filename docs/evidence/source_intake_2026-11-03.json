@@ -6,8 +6,15 @@
     "retentionops ingest-events --input events.jsonl --source-id demo-feed --complete-through 2026-11-03",
     "retentionops run-events --source-release <source_release_id>"
   ],
-  "intake_manifest": {
-    "source_release_id": "demo-feed-ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
+  "source_manifest": {
+    "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
+    "identity": {
+      "source_id": "demo-feed",
+      "sha256": "ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
+      "source_type": "SYNTHETIC",
+      "schema_version": "subscription-events-v1",
+      "complete_through": "2026-11-03"
+    },
     "source_id": "demo-feed",
     "sha256": "ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
     "source_type": "SYNTHETIC",
@@ -25,15 +32,41 @@
     },
     "rights": "Synthetic-only local intake; real customer sources are not approved by this contract"
   },
-  "feature_release": {
-    "id": "cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
+  "feature_manifest": {
+    "feature_release_id": "7b66e6c3e84953133a2239280663b617c38b3a1af9d9702ed9d8c41587f30c4e",
+    "identity": {
+      "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
+      "dataset_sha256": "cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
+      "freeze": "2026-11-03",
+      "schema_version": "event-features-v1",
+      "implementation_sha256": "54ab11b9a8862e7b279706f389460d564b02a3dbb4a4bb965c09096af23db517",
+      "polars_version": "1.44.2"
+    },
+    "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
+    "source_sha256": "ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
     "dataset_sha256": "cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
-    "parquet_sha256": "66aa8f401a2cfde808c8af8afe219f96405427e37ce98f6dfcf5c6f730b4a708",
-    "rows": 2600
+    "feature_parquet_sha256": "66aa8f401a2cfde808c8af8afe219f96405427e37ce98f6dfcf5c6f730b4a708",
+    "rows": 2600,
+    "quality": {
+      "input_event_revisions": 69748,
+      "logical_events": 69748,
+      "customers": 650,
+      "candidate_opportunities": 2600,
+      "eligible_rows": 2600,
+      "excluded_no_known_subscription": 0,
+      "complete_through": "2026-11-03",
+      "freeze": "2026-11-03",
+      "feature_windows": "[cutoff-lookback, cutoff); available_at <= cutoff",
+      "label": "No renewal in [scheduled expiry, expiry+30d]; source complete and mature"
+    },
+    "schema_version": "event-features-v1",
+    "source_type": "SYNTHETIC"
   },
   "model": {
-    "version": "synthetic-logreg-06bedf79007b189c8c1bff693500dc88a4417a6feeb2743f57575fed3a1a2c0c",
-    "sha256": "c339287fc0a017cdc1a579bb971eb2b7185f1e772a6f24047780dab61ee8dca5"
+    "version": "synthetic-logreg-ef6cf634abd8f0c37281fd7842a33a277acfe2384b5af1b98564a7e5932129aa",
+    "sha256": "c339287fc0a017cdc1a579bb971eb2b7185f1e772a6f24047780dab61ee8dca5",
+    "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
+    "source_manifest_sha256": "a3dea635647beda68cd276d50015d9d3d3dc3ba418f108ea0e79428d75e5759c"
   },
   "cohorts": {
     "train": {
@@ -66,9 +99,12 @@
     "rows": 650
   },
   "verification": {
-    "pytest": "71 passed; 1 upstream Starlette/httpx deprecation warning",
+    "local_smoke": "passed",
+    "pytest": "77 passed; 1 upstream Starlette/httpx deprecation warning",
     "ruff": "passed",
-    "ruff_format": "passed"
+    "ruff_format": "passed",
+    "pip_audit": "No known vulnerabilities found",
+    "repository_hygiene": "passed"
   },
   "limitations": [
     "Synthetic-only input contract; no real customer or KKBox data",

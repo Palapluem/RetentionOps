@@ -23,14 +23,17 @@ The first local pipeline stage accepts newline-delimited JSON only when each row
 `retentionops ingest-events` requires an explicit source ID and completeness watermark. It
 copies the source into staging, validates payloads, duplicate/revision continuity, logical
 identity, availability watermark and row reconciliation, then atomically publishes an
-immutable release at `data/events/{source_id}-{sha256}/`. The deterministic manifest records
-source identity, raw hash, schema, watermark, row/logical-event/customer counts, quality
-checks and rights boundary. Exact replays reuse the release; corruption and invalid sources
-fail closed without publishing.
+immutable release at `data/events/{source_id}-{release_identity_sha256}/`. The identity
+includes source ID, raw-byte hash, schema, source type and completeness watermark, so a later
+completeness assertion is a new version. The deterministic manifest records source identity,
+raw hash, schema, watermark, row/logical-event/customer counts, quality checks and rights
+boundary. Exact replays reuse the release; corruption and invalid sources fail closed without
+publishing.
 
 `retentionops run-events --source-release ...` verifies the release and manifest, derives
-point-in-time features and labels, writes an immutable typed Parquet feature release with
-lineage, then runs the established temporal model evaluation and atomic serving publication.
+point-in-time features and labels, writes an immutable typed Parquet feature release keyed by
+source, dataset, freeze, feature implementation and Polars version, then runs the established
+temporal model evaluation and atomic serving publication.
 `retentionops events` uses the same stages after generating a synthetic source. Local files
 and generated data stay under ignored `data/`; do not place the Execution Kit or licensed data
 in the repository.

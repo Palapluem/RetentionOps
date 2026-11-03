@@ -43,13 +43,16 @@ observations; a prior positive does not remove a customer from later cohorts.
 ## Lineage and storage
 
 `data/raw/synthetic-{full_sha256}/` contains immutable snapshot CSV + manifest. Event input is
-published under `data/events/{source_id}-{full_sha256}/` with the original JSONL bytes and a
-deterministic manifest containing source identity, contract version, completeness watermark,
-hash, row/logical-event/customer counts, revision and watermark checks, and synthetic-only
-rights. The source file is copied to staging and validated before an atomic directory rename.
-Identical content and metadata reuse one release. Corrupt existing content fails; invalid
-input creates no new published release. Feature Parquet is content-addressed under
-`data/features/{dataset_sha256}/`, with its own manifest linking back to the event release.
+published under `data/events/{source_id}-{release_identity_sha256}/` with the original JSONL
+bytes and a deterministic manifest containing source identity, contract version, completeness
+watermark, raw-byte hash, row/logical-event/customer counts, revision and watermark checks,
+and synthetic-only rights. Release identity hashes the source ID, raw hash, schema, source
+type and watermark, so an updated completeness assertion creates a new immutable release.
+The source file is copied to staging and validated before an atomic directory rename.
+Identical source bytes and metadata reuse one release. Corrupt existing content fails; invalid
+input creates no new published release. Feature Parquet is stored under a release identity
+derived from source release, dataset hash, freeze, feature implementation and Polars version;
+its manifest links back to the event release.
 
 Prediction key: `(model_version, customer_id, as_of_date)`. One active release serves the API;
 older predictions remain available locally for audit. Reconcile published rows to test rows.
