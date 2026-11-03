@@ -59,3 +59,24 @@ After approval, record redacted resource inventory and actual job/revision IDs. 
 starts by disabling schedules, then removes approved services/jobs/images and reviews
 retained storage, warehouse tables/logs and billing. No bootstrap/apply script is included
 until its resource plan and safety conditions are verified.
+
+## Analyst workspace operation
+
+The current named verification environment runs with
+`docker compose -p retentionops-day1 run --rm --build pipeline` then
+`docker compose -p retentionops-day1 up --build --wait api web`.
+Product: http://127.0.0.1:3000; API: http://127.0.0.1:8000/docs.
+Run the event pipeline after upgrading; it creates the new feature/run tables during the
+writer step. API startup never migrates or writes storage. `/ready` reconciles scored keys
+with feature rows and all cohort counts, not only database existence.
+
+Successful job state commits with the active publication; failed attempts retain the last
+result. Process termination can leave a running attempt: inspect the actual process and
+replay manually; automatic stale-job reconciliation/cloud orchestration is not implemented.
+A replay records a new attempt but retains the immutable model training timestamp.
+
+Web uses a fixed server-side API URL, allowlisted read routes and no-store responses.
+It has no production authentication and remains loopback-only. TypeScript contracts must
+be regenerated from OpenAPI when backend contracts change. `npm run start` loads the
+production standalone server after `npm run build` copies static assets; it is not a dev server.
+See docs/CLOUD_ONBOARDING_TH.md before any cloud account/resource or identity work.

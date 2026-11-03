@@ -15,6 +15,10 @@ snapshot กับรายงานคุณภาพ Interface นี้ใช
 เพราะเป็นคนละนิยามกัน `available_at` บอกว่าเรารู้ event เมื่อไร ต่างจากวันเกิด event
 ส่วน watermark บอกว่าข้อมูลครอบคลุมถึงวันใด จึงจะสรุปว่าไม่มี renewal ได้อย่างมีเงื่อนไข
 renewal ที่ส่งมาช้าต้องเลื่อน label availability และอาจไม่ผ่าน embargo ของ cohort ถัดไป
+กรณีแก้ไขที่ลบ renewal ออกจากช่วงเวลา (เช่นเปลี่ยน `occurred_at`, `expiry_date` หรือ
+tombstone) ก็ต้องเลื่อน availability เช่นกัน เพราะค่าป้าย churn ปัจจุบันอาศัย correction
+ที่เพิ่งรู้ หากนับเฉพาะ revision ล่าสุดที่ยังเข้า window ข้อมูลอนาคตจะรั่วเข้าชุด train
+โดยไม่เห็นวันแก้ไข จึงเพิ่ม fixture หลาย cohort ที่ให้ `temporal_split` ปฏิเสธกรณีนี้
 
 รัน `retentionops events --customers 650` เพื่อสร้าง raw JSONL → validated features
 → CSV/Parquet → โมเดล/metrics → scores โดย Parquet เก็บวันเป็น DATE ไม่ใช่ข้อความ
@@ -108,3 +112,44 @@ branch protection/Project board เป็นสถานะที่ต้อง
 
 ขั้นถัดไปคือ review หลักฐาน Day 1 แล้วสร้าง event-derived features และ cloud plan ที่มี
 ขอบเขต ค่าใช้จ่ายและ cleanup ชัดเจน ก่อนขออนุมัติสร้างทรัพยากรที่มีค่าใช้จ่าย
+
+## รอบต่อยอด: analyst workspace, API contracts และ job publication
+
+`serving.py` อ่าน Overview/Risk/Cohorts/Model status ภายใน transaction เดียวและคืน
+`Workspace` ที่มี model version สอดคล้องกันทั้งชุด ช่วยตัดปัญหาอ่านสี่ endpoint ระหว่าง
+มีการ publish แล้วได้ข้อมูลปนคนละเวอร์ชัน ตัวกรองเป็น query parameters ที่ validate แล้ว
+และ SQL bind values เสมอ ไม่ต่อข้อความผู้ใช้เป็น SQL รายละเอียดลูกค้า pin model version
+จึงไม่กระโดดไปใช้ผลชุดใหม่ขณะเปิด dialog
+
+เพิ่ม feature snapshots ที่ grain model × customer × cutoff และตรวจคีย์ที่เชื่อมกับ scores
+การนับแถวเท่ากันยังไม่พอ เช่นแทน ID ลูกค้าหนึ่งรายด้วย ID ใหม่ จำนวนเท่าเดิมแต่ join ไม่ครบ
+publisher ต้อง reject และ readiness ต้องไม่ผ่าน หลักฐานอยู่ใน `tests/test_workspace.py`
+`runs.py` บันทึก job attempts จริง โดย successful state commit พร้อม publication ส่วน
+exception บันทึก failed แล้วเก็บ active result เดิม การหยุด process แบบ kill ยังต้องดู
+run ที่ค้าง running และ replay ด้วยผู้ปฏิบัติ ไม่ใช่อ้างว่าเป็น durable cloud orchestration
+API `/api/v1/jobs` อ่านประวัติ attempt ได้แยกจาก active publication เพื่อให้ผู้ใช้เห็น
+ความล้มเหลวครั้งแรกตอนยังไม่มี release; หน้า error จะบอกสถานะ publication จากข้อมูลนี้
+
+Next.js อยู่ใน `apps/web/` ใช้ TypeScript, React และ CSS ที่ควบคุมจาก tokens เดียว
+เลือกเพราะเหมาะกับ UI หลายหน้าที่เชื่อม typed backend และสร้าง production container ได้
+ข้อมูลเข้าเป็น workspace JSON ผ่าน same-origin proxy; ข้อมูลออกเป็นตัวกรอง ตาราง กราฟ
+cohort และ lineage ที่อ่านได้ ไม่มีการฝึกโมเดลจากการเปิดเว็บ ไม่มีการประเมิน uplift
+API URL อยู่ฝั่ง server และ proxy อนุญาตเฉพาะ path ที่กำหนด ไม่รับ URL ปลายทางจากผู้ใช้
+
+สัญญาเริ่มที่ Pydantic → OpenAPI → schema types ของ frontend ผ่าน `export_contracts.py`
+ตัว exporter รองรับ primitives, enums, arrays, objects, unions และ local references ที่ใช้จริง
+ถ้ามี schema construct ใหม่ที่ไม่รองรับจะหยุด generation ให้เพิ่ม test ก่อน ไม่ปล่อยชนิด
+ข้อมูลผิดเงียบ ๆ Runtime response validation ยังอยู่ที่ FastAPI; TypeScript ไม่ใช่ runtime validator
+
+รัน `npm run lint`, `npm run typecheck`, `npm run build` ใน apps/web และทดสอบด้วย
+`npm run test:e2e` หลัง activate Python venv Browser tests ใช้ production standalone server
+กับ API และ pipeline จริงของ fixture 150 ลูกค้า ตรวจตัวเลขจาก API, filter, pagination,
+model pinning, loading/error/retry, mobile overflow, keyboard และ axe accessibility
+ในงานทดสอบพบว่า hint ของ metrics ต้องอยู่ภายใน dd และชื่อที่ screen reader อ่านต้องมี
+ข้อความที่มองเห็นของปุ่มกราฟ ตารางที่เลื่อนแนวนอนต้องมี keyboard focus target ด้วย
+
+ข้อแลกเปลี่ยน: UI ใช้ workspace response เดียวและ client interactions ที่ไม่มี chart library
+เหมาะกับข้อมูลทดลองขนาดนี้; ขยายจริงควร materialize/cache governed warehouse summaries
+แทน scan JSON ทุก request ส่วน job และ SQLite เป็น local implementation ที่รัน writer เดียว
+เมื่อขึ้น GCP ต้องเปลี่ยน storage/identity และทดสอบ integration/rollback/cost จริง
+บัญชี GCP ยังไม่ได้สมัคร จึงเตรียมแผนทรัพยากรกับคู่มือโดยไม่มีการ provision หรือเปิด billing
