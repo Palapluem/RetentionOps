@@ -44,7 +44,7 @@ class Snapshot(BaseModel):
     def temporal_contract(self) -> Snapshot:
         if not self.feature_max_event_at <= self.source_max_available_at <= self.as_of_date:
             raise ValueError("Future feature event or availability beyond cutoff")
-        if (self.label_available_at - self.as_of_date).days != LABEL_HORIZON_DAYS:
+        if (self.label_available_at - self.as_of_date).days < LABEL_HORIZON_DAYS:
             raise ValueError("Invalid label horizon")
         return self
 

@@ -1,0 +1,118 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "pattern": "^SYN-[A-Za-z0-9-]+$",
+      "title": "Event Id",
+      "type": "string"
+    },
+    "revision": {
+      "default": 1,
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "customer_id": {
+      "pattern": "^SYN-[0-9]{5,7}$",
+      "title": "Customer Id",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "subscription",
+        "activity",
+        "payment_failed",
+        "renewal",
+        "cancellation"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "occurred_at": {
+      "format": "date",
+      "title": "Occurred At",
+      "type": "string"
+    },
+    "available_at": {
+      "format": "date",
+      "title": "Available At",
+      "type": "string"
+    },
+    "deleted": {
+      "default": false,
+      "title": "Deleted",
+      "type": "boolean"
+    },
+    "expiry_date": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Expiry Date"
+    },
+    "started_at": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Started At"
+    },
+    "monthly_fee": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "maximum": 10000,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Monthly Fee"
+    },
+    "auto_renew": {
+      "anyOf": [
+        {
+          "enum": [
+            0,
+            1
+          ],
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Auto Renew"
+    },
+    "source_type": {
+      "const": "SYNTHETIC",
+      "default": "SYNTHETIC",
+      "title": "Source Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_id",
+    "customer_id",
+    "kind",
+    "occurred_at",
+    "available_at"
+  ],
+  "title": "Event",
+  "type": "object"
+}

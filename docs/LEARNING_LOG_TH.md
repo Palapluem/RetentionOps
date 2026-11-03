@@ -1,5 +1,27 @@
 # บันทึกเรียนรู้ RetentionOps — 3 พฤศจิกายน 2026
 
+## รอบต่อยอด: events และ point-in-time features
+
+เพิ่ม `events.py` เป็น Module ที่รับ events/วัน freeze/วันที่ source ครอบคลุม แล้วคืน
+snapshot กับรายงานคุณภาพ Interface นี้ใช้ร่วมกันระหว่าง pipeline และ independent fixtures
+ช่วยเก็บกติกา revision/window/label ไว้จุดเดียวโดยไม่สร้าง Adapter ที่ยังไม่มีงานใช้จริง
+
+ตัวอย่างสำคัญใน `test_events.py`: failed payment เกิด 1 เม.ย. อยู่ใน lookback 90 วัน
+ของ cutoff 30 มิ.ย. แต่ถ้า correction ที่รู้ภายใน cutoff แก้วันเกิดเป็น 31 มี.ค.
+ต้องนำ revision ใหม่มาใช้ก่อนกรอง window มิฉะนั้นจะเผลอคืนค่า revision เก่าเข้ามานับ
+ถ้า correction เพิ่งรู้ 1 ก.ค. ต้องไม่เปลี่ยน snapshot ของ 30 มิ.ย.
+
+วันที่ cutoff ไม่รวมอยู่ใน feature window แต่วันต่ออายุที่ cutoff+30 รวมอยู่ใน label
+เพราะเป็นคนละนิยามกัน `available_at` บอกว่าเรารู้ event เมื่อไร ต่างจากวันเกิด event
+ส่วน watermark บอกว่าข้อมูลครอบคลุมถึงวันใด จึงจะสรุปว่าไม่มี renewal ได้อย่างมีเงื่อนไข
+renewal ที่ส่งมาช้าต้องเลื่อน label availability และอาจไม่ผ่าน embargo ของ cohort ถัดไป
+
+รัน `retentionops events --customers 650` เพื่อสร้าง raw JSONL → validated features
+→ CSV/Parquet → โมเดล/metrics → scores โดย Parquet เก็บวันเป็น DATE ไม่ใช่ข้อความ
+raw events กับ feature hash ช่วยตรวจ replay/correction; เป็นข้อมูลจำลองทั้งหมด
+เมื่อขยายสู่ GCS/BigQuery จะใช้สัญญาเดียวกัน แต่ยังต้องทดสอบ cloud integration จริง
+ไม่สามารถใช้ local Parquet หรือ fake adapter เป็นหลักฐานว่า deploy แล้วได้
+
 งานรอบแรกทำก่อนวันเริ่มตามแผนหนึ่งวัน เป้าหมายคือรันเส้นทางข้อมูลจนถึงหน้าจอให้ได้
 พร้อมหลักฐานตรวจสอบ ไม่ใช่ประกาศว่าระบบ cloud หรือโมเดลข้อมูลจริงเสร็จแล้ว
 

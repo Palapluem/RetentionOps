@@ -1,0 +1,178 @@
+{
+  "observed_at_bangkok": "2026-11-03T18:50:53.026977+07:00",
+  "mode": "SYNTHETIC_EVENT_DERIVED",
+  "quality": {
+    "input_event_revisions": 69748,
+    "logical_events": 69748,
+    "customers": 650,
+    "candidate_opportunities": 2600,
+    "eligible_rows": 2600,
+    "excluded_no_known_subscription": 0,
+    "complete_through": "2026-11-03",
+    "freeze": "2026-11-03",
+    "feature_windows": "[cutoff-lookback, cutoff); available_at <= cutoff",
+    "label": "No renewal in [scheduled expiry, expiry+30d]; source complete and mature"
+  },
+  "source_release": "synthetic-events-ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
+  "dataset_sha256": "cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
+  "parquet_sha256": "66aa8f401a2cfde808c8af8afe219f96405427e37ce98f6dfcf5c6f730b4a708",
+  "model_version": "synthetic-logreg-4c975894e60a6c6484c1ac98dbcc835ab32256486f504eb9018f5c82c5f0f6c8",
+  "model_sha256": "c339287fc0a017cdc1a579bb971eb2b7185f1e772a6f24047780dab61ee8dca5",
+  "cohorts": {
+    "train": {
+      "rows": 1300,
+      "cutoffs": [
+        "2026-06-30",
+        "2026-07-31"
+      ],
+      "max_label_available_at": "2026-08-30"
+    },
+    "validation": {
+      "rows": 650,
+      "cutoffs": [
+        "2026-08-31"
+      ],
+      "max_label_available_at": "2026-09-30"
+    },
+    "test": {
+      "rows": 650,
+      "cutoffs": [
+        "2026-09-30"
+      ],
+      "max_label_available_at": "2026-10-30"
+    }
+  },
+  "metrics": {
+    "validation": {
+      "logistic_regression": {
+        "average_precision": 0.30933925555229386,
+        "roc_auc": 0.7183083099598526,
+        "log_loss": 0.38899269066263803,
+        "brier": 0.11941682175231685,
+        "precision_at_10pct": 0.36923076923076925,
+        "recall_at_10pct": 0.24242424242424243,
+        "selected_k": 65,
+        "rows": 650,
+        "positives": 99,
+        "positive_rate": 0.1523076923076923,
+        "calibration": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 460,
+            "mean_predicted": 0.09462422072393092,
+            "observed_rate": 0.09782608695652174
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 147,
+            "mean_predicted": 0.2781465724798407,
+            "observed_rate": 0.24489795918367346
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6,
+            "count": 39,
+            "mean_predicted": 0.4751175391505369,
+            "observed_rate": 0.41025641025641024
+          },
+          {
+            "lower": 0.6,
+            "upper": 0.8,
+            "count": 4,
+            "mean_predicted": 0.637157812068133,
+            "observed_rate": 0.5
+          }
+        ]
+      },
+      "constant_prior": {
+        "average_precision": 0.1523076923076923,
+        "roc_auc": 0.5,
+        "log_loss": 0.42706525429548686,
+        "brier": 0.1292100591715976,
+        "precision_at_10pct": 0.16923076923076924,
+        "recall_at_10pct": 0.1111111111111111,
+        "selected_k": 65,
+        "rows": 650,
+        "positives": 99,
+        "positive_rate": 0.1523076923076923,
+        "calibration": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 650,
+            "mean_predicted": 0.1623076923076923,
+            "observed_rate": 0.1523076923076923
+          }
+        ]
+      }
+    },
+    "test": {
+      "logistic_regression": {
+        "average_precision": 0.25150571159809365,
+        "roc_auc": 0.6779990842490843,
+        "log_loss": 0.4216621782463329,
+        "brier": 0.13170363343879352,
+        "precision_at_10pct": 0.2923076923076923,
+        "recall_at_10pct": 0.18269230769230768,
+        "selected_k": 65,
+        "rows": 650,
+        "positives": 104,
+        "positive_rate": 0.16,
+        "calibration": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 459,
+            "mean_predicted": 0.09287138535454602,
+            "observed_rate": 0.11982570806100218
+          },
+          {
+            "lower": 0.2,
+            "upper": 0.4,
+            "count": 153,
+            "mean_predicted": 0.27497983187380076,
+            "observed_rate": 0.24183006535947713
+          },
+          {
+            "lower": 0.4,
+            "upper": 0.6,
+            "count": 33,
+            "mean_predicted": 0.4740305849443117,
+            "observed_rate": 0.36363636363636365
+          },
+          {
+            "lower": 0.6,
+            "upper": 0.8,
+            "count": 5,
+            "mean_predicted": 0.626086360224712,
+            "observed_rate": 0.0
+          }
+        ]
+      },
+      "constant_prior": {
+        "average_precision": 0.16,
+        "roc_auc": 0.5,
+        "log_loss": 0.4396895388297706,
+        "brier": 0.13440532544378694,
+        "precision_at_10pct": 0.13846153846153847,
+        "recall_at_10pct": 0.08653846153846154,
+        "selected_k": 65,
+        "rows": 650,
+        "positives": 104,
+        "positive_rate": 0.16,
+        "calibration": [
+          {
+            "lower": 0.0,
+            "upper": 0.2,
+            "count": 650,
+            "mean_predicted": 0.1623076923076923,
+            "observed_rate": 0.16
+          }
+        ]
+      }
+    }
+  },
+  "pytest": "56 passed, 1 upstream TestClient/httpx warning"
+}

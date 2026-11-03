@@ -16,6 +16,18 @@ Synthetic CSV → strict data contract → immutable source release
   → immutable model + manifest → transactional SQLite scores → FastAPI → smoke dashboard
 ```
 
+The event-backed path is now implemented and tested locally:
+
+```text
+Synthetic subscription/activity/payment/renewal events → latest known revisions
+  → point-in-time features + mature renewal labels → immutable CSV/typed Parquet
+  → the same evaluated model and atomic serving publication
+```
+
+Run `retentionops events --customers 650`; `retentionops all` preserves the earlier snapshot
+smoke path. See [event and renewal semantics](docs/EVENT_CONTRACT.md). These are simulated
+subscription opportunities, not KKBox observations or a real-world accuracy result.
+
 ## Run locally
 
 Python 3.11 is the supported baseline. From the repository root:

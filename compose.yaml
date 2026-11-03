@@ -1,7 +1,7 @@
 services:
   pipeline:
     build: .
-    command: ["retentionops", "all", "--root", "/workspace"]
+    command: ["retentionops", "events", "--root", "/workspace"]
     volumes:
       - demo:/workspace
   api:
