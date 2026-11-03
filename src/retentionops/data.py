@@ -30,7 +30,7 @@ class Snapshot(BaseModel):
     customer_id: Annotated[str, Field(pattern=r"^SYN-[0-9]{5,7}$")]
     as_of_date: date
     active_days_30d: Annotated[int, Field(ge=0, le=30)]
-    payment_failures_90d: Annotated[int, Field(ge=0, le=90)]
+    payment_failures_90d: Annotated[int, Field(ge=0)]
     tenure_months: Annotated[int, Field(ge=1, le=1200)]
     monthly_fee: Annotated[float, Field(gt=0, le=10000)]
     auto_renew: Literal[0, 1]

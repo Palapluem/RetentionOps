@@ -105,6 +105,82 @@ def test_late_outcome_advances_label_availability():
     assert build(rows).label_available_at == date(2026, 9, 1)
 
 
+@pytest.mark.parametrize("correction", ["outside-window", "changed-expiry", "deleted"])
+def test_removing_renewal_eligibility_retains_late_revision_availability(correction):
+    rows = history()
+    update = {"revision": 2, "available_at": date(2026, 9, 1)}
+    if correction == "outside-window":
+        update["occurred_at"] = date(2026, 7, 31)
+    elif correction == "changed-expiry":
+        update["expiry_date"] = date(2026, 7, 31)
+    else:
+        update["deleted"] = True
+    rows.append(rows[-1].model_copy(update=update))
+    snapshot = build(rows)
+    assert snapshot.churn_30d == 1
+    assert snapshot.label_available_at == date(2026, 9, 1)
+
+
+def test_removed_renewal_late_correction_cannot_enter_earlier_training():
+    from retentionops.data import CUTOFFS
+
+    rows = []
+    for n in range(2):
+        customer = f"SYN-{n:05d}"
+        for cutoff in CUTOFFS:
+            rows.append(
+                Event(
+                    event_id=f"{customer}-plan-{cutoff}",
+                    customer_id=customer,
+                    kind="subscription",
+                    occurred_at=cutoff - timedelta(days=10),
+                    available_at=cutoff - timedelta(days=9),
+                    started_at=date(2026, 1, 1),
+                    expiry_date=cutoff,
+                    monthly_fee=149,
+                    auto_renew=1,
+                )
+            )
+            if n == 1:
+                rows.append(
+                    Event(
+                        event_id=f"{customer}-renew-{cutoff}",
+                        customer_id=customer,
+                        kind="renewal",
+                        occurred_at=cutoff + timedelta(days=10),
+                        available_at=cutoff + timedelta(days=11),
+                        expiry_date=cutoff,
+                    )
+                )
+    original, _ = build_features(rows, DEFAULT_AS_OF, DEFAULT_AS_OF)
+    temporal_split(original)
+    renewal = next(e for e in rows if e.kind == "renewal" and e.expiry_date == CUTOFF)
+    rows.append(
+        renewal.model_copy(
+            update={
+                "revision": 2,
+                "occurred_at": date(2026, 7, 31),
+                "available_at": date(2026, 9, 1),
+            }
+        )
+    )
+    corrected, _ = build_features(rows, DEFAULT_AS_OF, DEFAULT_AS_OF)
+    with pytest.raises(ValueError, match="embargo"):
+        temporal_split(corrected)
+
+
+def test_missing_revision_history_is_not_silently_excluded():
+    rows = history()
+    rows[3] = rows[3].model_copy(update={"revision": 2})
+    with pytest.raises(ValueError, match="revision history"):
+        build(rows)
+
+
+def test_payment_count_is_not_capped_by_number_of_days():
+    rows = history() + [event("payment_failed", f"attempt-{i}", "2026-06-20") for i in range(100)]
+    assert build(rows).payment_failures_90d == 101
+
+
 @pytest.mark.parametrize("change", ["duplicate", "identity", "watermark", "revision-order"])
 def test_quality_gate_failure(change):
     rows = history()

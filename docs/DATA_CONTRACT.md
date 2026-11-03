@@ -19,7 +19,7 @@ extra/missing/duplicate headers fail. Critical values must be present, finite an
 | Field | Meaning / range |
 |---|---|
 | `active_days_30d` | Simulated active days; integer 0–30 |
-| `payment_failures_90d` | Simulated payment failures; integer 0–90 |
+| `payment_failures_90d` | Nonnegative count of failed payment events; multiple per day allowed |
 | `tenure_months` | Integer 1–1200 |
 | `monthly_fee` | Finite simulated fee; greater than 0, at most 10000 |
 | `auto_renew` | Binary plan flag known at cutoff |

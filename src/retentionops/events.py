@@ -69,6 +69,8 @@ def validate_events(events: list[Event], complete_through: date) -> None:
         rows.sort(key=lambda e: e.revision)
         if len({e.revision for e in rows}) != len(rows):
             raise ValueError("Duplicate event revision")
+        if any(e.revision != expected for expected, e in enumerate(rows, start=1)):
+            raise ValueError("Complete event revision history starting at 1 is required")
         if len({(e.customer_id, e.kind) for e in rows}) != 1:
             raise ValueError("Logical event identity changed across revisions")
         if any(a.available_at > b.available_at for a, b in pairwise(rows)):
@@ -131,16 +133,25 @@ def build_features(
             ]
             contributing = [plan, *activity, *payments]
             horizon = cutoff + timedelta(days=30)
+            # Retain the latest availability of revisions that REMOVE a previous renewal
+            # from this opportunity/window, as well as revisions that add a renewal.
+            relevant_ids = {
+                e.event_id
+                for e in history
+                if e.kind == "renewal"
+                and e.available_at <= freeze
+                and e.expiry_date == cutoff
+                and cutoff <= e.occurred_at <= horizon
+            }
+            label_revisions = [e for e in outcomes if e.event_id in relevant_ids]
             renewals = [
                 e
-                for e in outcomes
+                for e in label_revisions
                 if (
-                    e.kind == "renewal"
-                    and e.expiry_date == cutoff
-                    and cutoff <= e.occurred_at <= horizon
+                    e.expiry_date == cutoff and cutoff <= e.occurred_at <= horizon and not e.deleted
                 )
             ]
-            label_available = max([horizon, *(e.available_at for e in renewals)])
+            label_available = max([horizon, *(e.available_at for e in label_revisions)])
             records.append(
                 Snapshot(
                     customer_id=customer,
@@ -152,7 +163,7 @@ def build_features(
                     auto_renew=plan.auto_renew,
                     feature_max_event_at=max(e.occurred_at for e in contributing),
                     source_max_available_at=max(e.available_at for e in contributing),
-                    churn_30d=int(not any(not e.deleted for e in renewals)),
+                    churn_30d=int(not renewals),
                     label_available_at=label_available,
                     source_type="SYNTHETIC",
                 )

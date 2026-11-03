@@ -10,15 +10,18 @@ to the scheduled expiry date. A subscription opportunity must already be known b
 that cutoff. Churn means no renewal event for that opportunity in the inclusive interval
 `[expiry, expiry + 30 days]`. Source completeness and evaluation freeze must cover that
 interval. Labels use the latest revisions available at freeze; a late outcome correction
-also advances label availability. It cannot silently enter an earlier training cohort.
+that adds, removes or changes a qualifying renewal advances label availability. It cannot
+silently enter an earlier training cohort.
 This is a project-defined simulation, not the unverified KKBox competition definition.
 Repeated monthly opportunities can represent reactivation; it is not a survival cohort.
 
 ## Bitemporal feature rules
 
 Event key is `(event_id, revision)`; a logical ID retains customer and event kind across
-revisions. `occurred_at <= available_at`. Latest revision known by cutoff wins, including
-tombstones. Choose the revision **before** filtering event time, so corrected/deleted
+revisions. `occurred_at <= available_at`. A source retains contiguous revision history
+starting at 1; missing earlier revisions fail because snapshots could silently lose events.
+Latest revision known by cutoff wins, including tombstones. Choose the revision **before**
+filtering event time, so corrected/deleted
 events cannot resurrect an obsolete value. Unknown future revisions have no effect.
 
 Feature event windows are right-exclusive: `[cutoff - 30 days, cutoff)` for distinct active
