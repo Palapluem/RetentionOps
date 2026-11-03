@@ -24,9 +24,24 @@ Synthetic subscription/activity/payment/renewal events → latest known revision
   → the same evaluated model and atomic serving publication
 ```
 
-Run `retentionops events --customers 650`; `retentionops all` preserves the earlier snapshot
-smoke path. See [event and renewal semantics](docs/EVENT_CONTRACT.md). These are simulated
-subscription opportunities, not KKBox observations or a real-world accuracy result.
+Run `retentionops events --customers 650` for the one-command synthetic demo; `retentionops all`
+preserves the earlier snapshot smoke path. To exercise the first pipeline as separate,
+replayable stages:
+
+```bash
+retentionops generate-events --output data/incoming/demo-events.jsonl --customers 650
+retentionops ingest-events --input data/incoming/demo-events.jsonl \
+  --source-id demo-feed --complete-through 2026-11-03
+# Copy source_release_id from the intake report:
+retentionops run-events --source-release 'PASTE_SOURCE_RELEASE_ID'
+```
+
+Intake validates the staged bytes and atomically publishes a content-addressed release under
+`data/events/`. Replay verifies its checksum and quality manifest before features, training,
+temporal evaluation and publication. Identical input is idempotent; failed intake publishes no
+release. The adapter accepts the synthetic event contract only, not KKBox or real customer
+data. See [event and renewal semantics](docs/EVENT_CONTRACT.md). These are simulated
+subscription opportunities, not a real-world accuracy result.
 
 ## Run locally
 
@@ -92,6 +107,7 @@ volume lifecycle. A Dockerfile is not deployment evidence.
 - [Thai learning log](docs/LEARNING_LOG_TH.md)
 - [Testing strategy](docs/TESTING.md), [risk register](docs/RISK_REGISTER.md)
 - [Release gates](docs/RELEASE_AUDIT.md), [backlog](docs/BACKLOG.md)
+- [Local source-intake and replay evidence](docs/evidence/source_intake_2026-11-03.json)
 
 The original Execution Kit is intentionally excluded from Git and Docker context. This repo
 contains reviewed implementation and project documentation, not the kit directory.

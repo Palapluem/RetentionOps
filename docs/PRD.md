@@ -17,8 +17,8 @@ and Next.js. Public demonstrations use generated synthetic accounts exclusively.
 
 | Capability | Current implementation | Release requirement |
 |---|---|---|
-| Source intake | Generated CSV, strict schema, SHA-256 local releases | Authorized GCS/BigQuery ingestion and reconciliation |
-| Features | Simulated snapshots with temporal metadata checks | Event-derived point-in-time features and late-correction policy |
+| Source intake | Synthetic CSV and JSONL event intake, source identity, immutable hash/quality manifests, idempotent replay | Authorized source-specific GCS/BigQuery ingestion and reconciliation |
+| Features | Event-derived point-in-time features and mature synthetic renewal labels; legacy snapshot smoke path retained | Real-source event mapping, independent label/correction policy and production warehouse transforms |
 | Training | Fixed Logistic Regression, constant prior, 3 temporal splits | Baseline/candidate comparison, tracked promotion |
 | Model lineage | Data/code/config/dependencies/model hashes | GCS versioned artifacts, reproducible cloud training |
 | Scores | Transactional local SQLite, active-release isolation | Idempotent BigQuery batch scoring |

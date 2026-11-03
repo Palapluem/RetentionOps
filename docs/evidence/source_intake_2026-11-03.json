@@ -1,0 +1,113 @@
+{
+  "observed_date": "2026-11-03",
+  "mode": "SYNTHETIC_EVENT_SOURCE_INTAKE_REPLAY",
+  "commands": [
+    "retentionops generate-events --output events.jsonl --customers 650",
+    "retentionops ingest-events --input events.jsonl --source-id demo-feed --complete-through 2026-11-03",
+    "retentionops run-events --source-release <source_release_id>"
+  ],
+  "source_manifest": {
+    "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
+    "identity": {
+      "source_id": "demo-feed",
+      "sha256": "ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
+      "source_type": "SYNTHETIC",
+      "schema_version": "subscription-events-v1",
+      "complete_through": "2026-11-03"
+    },
+    "source_id": "demo-feed",
+    "sha256": "ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
+    "source_type": "SYNTHETIC",
+    "schema_version": "subscription-events-v1",
+    "complete_through": "2026-11-03",
+    "rows": 69748,
+    "quality": {
+      "rows": 69748,
+      "logical_events": 69748,
+      "customers": 650,
+      "max_available_at": "2026-10-26",
+      "revision_history": "contiguous-from-1",
+      "duplicate_event_revisions": 0,
+      "watermark_passed": true
+    },
+    "rights": "Synthetic-only local intake; real customer sources are not approved by this contract"
+  },
+  "feature_manifest": {
+    "feature_release_id": "98d0908b39df17cec856ce1e576812c204f5fff76fffd96785436306bbe3077d",
+    "identity": {
+      "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
+      "dataset_sha256": "cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
+      "freeze": "2026-11-03",
+      "schema_version": "event-features-v1",
+      "implementation_sha256": "6ddd51b099f7b6306ce57f4776c94995bb5ec422488ae10929e91c9792d84a2a",
+      "polars_version": "1.44.2"
+    },
+    "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
+    "source_sha256": "ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
+    "dataset_sha256": "cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
+    "feature_parquet_sha256": "66aa8f401a2cfde808c8af8afe219f96405427e37ce98f6dfcf5c6f730b4a708",
+    "rows": 2600,
+    "quality": {
+      "input_event_revisions": 69748,
+      "logical_events": 69748,
+      "customers": 650,
+      "candidate_opportunities": 2600,
+      "eligible_rows": 2600,
+      "excluded_no_known_subscription": 0,
+      "complete_through": "2026-11-03",
+      "freeze": "2026-11-03",
+      "feature_windows": "[cutoff-lookback, cutoff); available_at <= cutoff",
+      "label": "No renewal in [scheduled expiry, expiry+30d]; source complete and mature"
+    },
+    "schema_version": "event-features-v1",
+    "source_type": "SYNTHETIC"
+  },
+  "model": {
+    "version": "synthetic-logreg-87657f7f6a092c8930b5019ff43a7167c8807813c805f074dfe4e1bbcd9ee531",
+    "sha256": "c339287fc0a017cdc1a579bb971eb2b7185f1e772a6f24047780dab61ee8dca5",
+    "source_release_id": "demo-feed-7762048ad7d583a0b49fc9ea6ff4cdc8aecc9ddabab8185c0db861e9b2792dc8",
+    "source_manifest_sha256": "629d23f483cafff61b9d01df1bc64983c3c81fd3aa261c1bb6ad85afc5d37265"
+  },
+  "cohorts": {
+    "train": {
+      "rows": 1300,
+      "cutoffs": [
+        "2026-06-30",
+        "2026-07-31"
+      ],
+      "max_label_available_at": "2026-08-30"
+    },
+    "validation": {
+      "rows": 650,
+      "cutoffs": [
+        "2026-08-31"
+      ],
+      "max_label_available_at": "2026-09-30"
+    },
+    "test": {
+      "rows": 650,
+      "cutoffs": [
+        "2026-09-30"
+      ],
+      "max_label_available_at": "2026-10-30"
+    }
+  },
+  "test_metrics": {
+    "average_precision": 0.25150571159809365,
+    "roc_auc": 0.6779990842490843,
+    "log_loss": 0.4216621782463329,
+    "rows": 650
+  },
+  "verification": {
+    "local_smoke": "passed",
+    "pytest": "77 passed; 1 upstream Starlette/httpx deprecation warning",
+    "ruff": "passed",
+    "ruff_format": "passed",
+    "pip_audit": "No known vulnerabilities found",
+    "repository_hygiene": "passed"
+  },
+  "limitations": [
+    "Synthetic-only input contract; no real customer or KKBox data",
+    "No GCS, BigQuery, GCP resources, or cloud integration was used"
+  ]
+}

@@ -15,6 +15,33 @@ silently enter an earlier training cohort.
 This is a project-defined simulation, not the unverified KKBox competition definition.
 Repeated monthly opportunities can represent reactivation; it is not a survival cohort.
 
+## Local source intake and replay
+
+The first local pipeline stage accepts newline-delimited JSON only when each row conforms to
+`subscription-events-v1`. It currently requires synthetic event/customer identifiers and
+`source_type: SYNTHETIC`; it does not accept raw KKBox files or claim a general source mapping.
+`retentionops ingest-events` requires an explicit source ID and completeness watermark. It
+copies the source into staging, validates payloads, duplicate/revision continuity, logical
+identity, availability watermark and row reconciliation, then atomically publishes an
+immutable release at `data/events/{source_id}-{release_identity_sha256}/`. The identity
+includes source ID, raw-byte hash, schema, source type and completeness watermark, so a later
+completeness assertion is a new version. The deterministic manifest records source identity,
+raw hash, schema, watermark, row/logical-event/customer counts, quality checks and rights
+boundary. Exact replays reuse the release; corruption and invalid sources fail closed without
+publishing.
+
+`retentionops run-events --source-release ...` verifies the release and manifest, derives
+point-in-time features and labels, writes an immutable typed Parquet feature release keyed by
+source, dataset, freeze, feature implementation and Polars version, then runs the established
+temporal model evaluation and atomic serving publication.
+`retentionops events` uses the same stages after generating a synthetic source. Local files
+and generated data stay under ignored `data/`; do not place the Execution Kit or licensed data
+in the repository.
+
+GCS object generations, BigQuery bronze tables, cloud IAM, Cloud Run jobs and scheduling are
+not implemented in this local adapter. They remain blocked on verified source rights and the
+owner's GCP project, region, budget and access setup.
+
 ## Bitemporal feature rules
 
 Event key is `(event_id, revision)`; a logical ID retains customer and event kind across

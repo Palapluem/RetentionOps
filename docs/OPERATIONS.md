@@ -2,10 +2,34 @@
 
 ## Normal operation
 
-Activate the venv; run `retentionops all`; start Uvicorn bound to `127.0.0.1`. `/health` is
-process liveness. `/ready` is HTTP 200 only when the serving database contains an active
-manifest and reconciled score count; it does not mean that historical data is fresh today.
-Overview reports both `trained_at` and `score_cutoff`. Only one pipeline writer per root.
+Activate the venv; run `retentionops events` for the generated event demo or run the staged
+source workflow below; start Uvicorn bound to `127.0.0.1`. `/health` is process liveness.
+`/ready` is HTTP 200 only when the serving database contains an active manifest and
+reconciled score count; it does not mean that historical data is fresh today. Overview reports
+both `trained_at` and `score_cutoff`. Only one pipeline writer per root.
+
+### Ingest and replay an event source
+
+The local intake is synthetic-only. Generate a sample source or provide a file already
+conforming to the versioned event contract. Declare the source identity and latest complete
+availability date explicitly:
+
+```bash
+retentionops generate-events --output data/incoming/demo-events.jsonl --customers 650
+retentionops ingest-events --input data/incoming/demo-events.jsonl \
+  --source-id demo-feed --complete-through 2026-11-03
+```
+
+Review the returned `source_release_id` and quality counts, then replay that immutable source:
+
+```bash
+retentionops run-events --source-release 'PASTE_SOURCE_RELEASE_ID'
+```
+
+The replay verifies the source and manifest before deriving features or training. Identical
+source bytes with the same source ID and watermark are idempotent. Failed validation leaves
+no new event release and does not alter the serving publication. This path does not connect
+to GCS or BigQuery; cloud ingestion remains a separate gated implementation.
 
 To avoid overwriting an earlier experiment, pass `--root` and matching `RETENTIONOPS_ROOT`.
 Do not load joblib files from an untrusted source; they are executable serialization. The
@@ -17,7 +41,8 @@ API never deserializes a model and has no write or arbitrary SQL endpoint.
    active publication; SQLite rolls back invalid score batches.
 2. Confirm `/ready` and the overview model version. A failed run is not a successful refresh.
 3. Correct the synthetic input/generator/config in a reviewed branch, run focused tests,
-   then rerun the same command. The source hash prevents duplicate raw releases.
+   then re-ingest and replay. The raw source hash prevents duplicate releases; do not edit a
+   published release in place.
 4. Verify row reconciliation, model checksum and risk version before using results.
 
 Corrupt source/model directories fail closed and are never silently overwritten. Preserve

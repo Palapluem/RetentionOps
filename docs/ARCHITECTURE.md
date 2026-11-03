@@ -4,32 +4,39 @@
 
 ```mermaid
 flowchart LR
-  G[Synthetic snapshot generator] --> V[Strict schema + temporal validation]
-  V --> R[(Content-addressed local raw release)]
-  R --> T[Train-only scaling + Logistic Regression]
+  G[Synthetic generator or synthetic JSONL file] --> I[Staged intake: schema, identity, revision, watermark]
+  I --> R[(Immutable event release + quality manifest)]
+  R --> F[Point-in-time features + mature renewal labels]
+  F --> Q[(Immutable CSV / typed Parquet feature release)]
+  Q --> T[Train-only scaling + Logistic Regression]
   T --> E[Validation/test and constant-prior comparison]
-  T --> M[(Immutable model + manifest)]
+  T --> M[(Immutable model + source lineage)]
   E --> P[Atomic publication]
   M --> P
   P --> S[(SQLite active release + scores)]
   S --> A[Typed read-only FastAPI]
-  A --> U[Local smoke dashboard]
+  A --> U[Local analyst dashboard]
 ```
 
-`data.py` owns source schema/intake; `training.py` owns the fixed evaluation protocol;
-`pipeline.py` coordinates artifacts and lineage; `storage.py` owns publication transactions;
-`api.py` serves bounded results; `cli.py` explicitly runs work. Shared code is in
-`src/retentionops/`; introduce `apps/web/` and separate job entrypoints as those are built.
+`events.py` owns event schema, local intake, immutable raw source releases, quality reports and
+point-in-time feature derivation. `data.py` owns the earlier snapshot schema/intake;
+`training.py` owns the fixed evaluation protocol; `pipeline.py` coordinates artifacts and
+lineage; `storage.py` owns publication transactions; `api.py` serves bounded results; `cli.py`
+exposes generation, ingestion, replay, and the one-command demo. Shared code is in
+`src/retentionops/`.
 
-Data is generated at customer × cutoff grain. The entire source is validated before a raw
-release becomes visible. Models are written through a staging directory then renamed.
-SQLite commits manifest, predictions and the active pointer together. A request reads the
-active manifest and scores within one read transaction, preventing mixed model releases.
+Synthetic event intake copies the input into staging, validates all rows and revisions against
+the declared completeness watermark, writes deterministic provenance, then renames the
+release directory atomically. Replay verifies the raw hash and quality evidence before
+derivation. Feature Parquet and model artifacts are immutable and content-addressed. SQLite
+commits manifest, predictions and the active pointer together. A request reads the active
+manifest and scores within one read transaction, preventing mixed model releases.
 
-Local constraints: one pipeline writer per root; CSV materializes in memory; SQLite serves
-small demos; no public authentication; no cloud scheduler; feature values are simulated,
-not computed from raw subscription/activity events. Provenance fields are checked but
-cannot independently prove that an external aggregate was generated correctly.
+Local constraints: the event adapter accepts only the synthetic event schema and IDs; it is
+not a real-data/KKBox source adapter. One pipeline writer per root; CSV intake materializes in
+memory; SQLite serves small demos; no cloud scheduler or GCS/BigQuery integration exists. The
+legacy `all` command still uses simulated snapshot features. Cloud resources remain planned,
+not provisioned.
 
 ## Target cloud architecture (planned)
 

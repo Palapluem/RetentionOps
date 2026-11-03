@@ -4,8 +4,9 @@ Canonical map: https://github.com/Palapluem/RetentionOps/issues/5
 
 ## Destination
 
-Run synthetic subscription events through point-in-time features, evaluated models and
-versioned scores into an analyst workspace, with tested local/container/CI delivery.
+Receive a versioned synthetic event source, validate and replay it through point-in-time
+features, evaluated models and versioned scores into an analyst workspace, with tested
+local/container/CI delivery.
 
 ## Notes
 
@@ -13,12 +14,17 @@ The owner authorized execution after decisions on 2026-11-03. Use Wayfinder,
 codebase-design, find-docs, frontend-design and React/Next.js best practices. Continue safe
 local implementation while source rights and paid cloud approval remain external gates.
 Stack feature PRs on the reviewed foundation; preserve the original local Execution Kit.
+The local source-intake extension is tracked as
+[Add replayable local event-source ingestion](https://github.com/Palapluem/RetentionOps/issues/10)
+and is under review in [PR #11](https://github.com/Palapluem/RetentionOps/pull/11).
+It is synthetic-only; a real-data adapter and GCS/BigQuery execution require separate rights
+and cloud readiness decisions.
 
 ## Decisions so far
 
-The temporal and product contract is being resolved in
-[Define temporal event, renewal-label, and analyst-serving contracts](https://github.com/Palapluem/RetentionOps/issues/6).
-This entry will become a closed-decision index when the contract is recorded and verified.
+[Define temporal event, renewal-label, and analyst-serving contracts](https://github.com/Palapluem/RetentionOps/issues/6)
+resolved the day-grain event/revision rules, label maturity and analyst views; the source
+contract and implementation limits are recorded in `docs/EVENT_CONTRACT.md`.
 
 ## Not yet specified
 

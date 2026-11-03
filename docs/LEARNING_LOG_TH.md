@@ -22,6 +22,24 @@ raw events กับ feature hash ช่วยตรวจ replay/correction; �
 เมื่อขยายสู่ GCS/BigQuery จะใช้สัญญาเดียวกัน แต่ยังต้องทดสอบ cloud integration จริง
 ไม่สามารถใช้ local Parquet หรือ fake adapter เป็นหลักฐานว่า deploy แล้วได้
 
+## Pipeline แรกที่แยกเป็นขั้นตอนรับเข้าและ replay
+
+ก่อนหน้านี้คำสั่ง `events` สร้างข้อมูลแล้วทำทุกขั้นในคำสั่งเดียว ทำให้ยังไม่เห็นขอบเขต
+ของการรับ source จริงในทางปฏิบัติ จึงเพิ่ม `generate-events` สำหรับสร้างไฟล์ JSONL,
+`ingest-events` สำหรับรับไฟล์เข้า staging ตรวจ schema/identity/revision/watermark และเก็บ
+immutable release, และ `run-events` สำหรับอ่าน release ที่มีอยู่แล้วไปทำ feature, train,
+ประเมิน และ publish
+
+manifest ของ event release เก็บ source ID, SHA-256, วันข้อมูลครบ, จำนวนแถว/เหตุการณ์จริง/
+ลูกค้า และผล quality gate ก่อน atomic rename ส่วน feature release เชื่อมกลับไปยัง source
+ด้วย hash อีกชั้น การรับไฟล์เดิมซ้ำจึงใช้ release เดิม; ไฟล์เสียหรือ quality ไม่ผ่านต้องหยุด
+ก่อนปล่อย release ใหม่ การแยกนี้พิสูจน์ local intake/replay ได้ แต่ยังไม่ใช่ GCS object
+generation, BigQuery bronze, IAM หรือ Cloud Run integration
+
+ตัวอย่างคำสั่งอยู่ใน README และ `docs/OPERATIONS.md` โดยตั้งใจรับเฉพาะ event contract
+สังเคราะห์ การรับ KKBox/ข้อมูลลูกค้าจริงต้องมี schema mapping, สิทธิ์ใช้ข้อมูล, label ที่
+ยืนยันได้ และ cloud/account gate ก่อนพัฒนา adapter แยก
+
 งานรอบแรกทำก่อนวันเริ่มตามแผนหนึ่งวัน เป้าหมายคือรันเส้นทางข้อมูลจนถึงหน้าจอให้ได้
 พร้อมหลักฐานตรวจสอบ ไม่ใช่ประกาศว่าระบบ cloud หรือโมเดลข้อมูลจริงเสร็จแล้ว
 
