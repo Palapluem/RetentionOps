@@ -1,0 +1,1078 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RetentionOps Synthetic Analytics API",
+    "version": "0.1.0.dev1"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "summary": "Ready",
+        "operationId": "ready_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ready"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/overview": {
+      "get": {
+        "summary": "Overview",
+        "operationId": "overview_api_v1_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/risk": {
+      "get": {
+        "summary": "Risk",
+        "operationId": "risk_api_v1_risk_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^[A-Za-z0-9-]*$",
+              "default": "",
+              "title": "Search"
+            }
+          },
+          {
+            "name": "band",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "high",
+                "watch",
+                "low"
+              ],
+              "type": "string",
+              "default": "all",
+              "title": "Band"
+            }
+          },
+          {
+            "name": "auto_renew",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 1,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Auto Renew"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cohorts": {
+      "get": {
+        "summary": "Cohorts",
+        "operationId": "cohorts_api_v1_cohorts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CohortPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/model-status": {
+      "get": {
+        "summary": "Model Status",
+        "operationId": "model_status_api_v1_model_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workspace": {
+      "get": {
+        "summary": "Workspace",
+        "operationId": "workspace_api_v1_workspace_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^[A-Za-z0-9-]*$",
+              "default": "",
+              "title": "Search"
+            }
+          },
+          {
+            "name": "band",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "high",
+                "watch",
+                "low"
+              ],
+              "type": "string",
+              "default": "all",
+              "title": "Band"
+            }
+          },
+          {
+            "name": "auto_renew",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 1,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Auto Renew"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/customers/{customer_id}": {
+      "get": {
+        "summary": "Customer",
+        "operationId": "customer_api_v1_customers__customer_id__get",
+        "parameters": [
+          {
+            "name": "customer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^SYN-[0-9]{5,7}$",
+              "title": "Customer Id"
+            }
+          },
+          {
+            "name": "model_version",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^synthetic-logreg-[a-f0-9]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Cohort": {
+        "properties": {
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "partition": {
+            "type": "string",
+            "enum": [
+              "train",
+              "validation",
+              "test"
+            ],
+            "title": "Partition"
+          },
+          "eligible": {
+            "type": "integer",
+            "title": "Eligible"
+          },
+          "churned": {
+            "type": "integer",
+            "title": "Churned"
+          },
+          "churn_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Churn Rate"
+          },
+          "mean_active_days": {
+            "type": "number",
+            "title": "Mean Active Days"
+          },
+          "auto_renew_share": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Auto Renew Share"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "as_of_date",
+          "partition",
+          "eligible",
+          "churned",
+          "churn_rate",
+          "mean_active_days",
+          "auto_renew_share"
+        ],
+        "title": "Cohort"
+      },
+      "CohortPage": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "const": "SYNTHETIC",
+            "title": "Data Mode",
+            "default": "SYNTHETIC"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "label_freeze": {
+            "type": "string",
+            "format": "date",
+            "title": "Label Freeze"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Cohort"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model_version",
+          "label_freeze",
+          "items"
+        ],
+        "title": "CohortPage"
+      },
+      "CustomerDetail": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "title": "Customer Id"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "churn_probability": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Churn Probability"
+          },
+          "risk_band": {
+            "type": "string",
+            "enum": [
+              "high",
+              "watch",
+              "low"
+            ],
+            "title": "Risk Band"
+          },
+          "features": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Features"
+          },
+          "feature_max_event_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Feature Max Event At"
+          },
+          "source_max_available_at": {
+            "type": "string",
+            "format": "date",
+            "title": "Source Max Available At"
+          },
+          "source_release_id": {
+            "type": "string",
+            "title": "Source Release Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "customer_id",
+          "model_version",
+          "as_of_date",
+          "churn_probability",
+          "risk_band",
+          "features",
+          "feature_max_event_at",
+          "source_max_available_at",
+          "source_release_id"
+        ],
+        "title": "CustomerDetail"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status",
+            "default": "ok"
+          },
+          "data_mode": {
+            "type": "string",
+            "const": "SYNTHETIC",
+            "title": "Data Mode",
+            "default": "SYNTHETIC"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Health"
+      },
+      "ModelStatus": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "const": "SYNTHETIC",
+            "title": "Data Mode",
+            "default": "SYNTHETIC"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "source_release_id": {
+            "type": "string",
+            "title": "Source Release Id"
+          },
+          "event_release_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Release Id"
+          },
+          "feature_origin": {
+            "type": "string",
+            "title": "Feature Origin"
+          },
+          "dataset_sha256": {
+            "type": "string",
+            "title": "Dataset Sha256"
+          },
+          "model_sha256": {
+            "type": "string",
+            "title": "Model Sha256"
+          },
+          "feature_schema_sha256": {
+            "type": "string",
+            "title": "Feature Schema Sha256"
+          },
+          "trained_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Trained At"
+          },
+          "evaluation_freeze": {
+            "type": "string",
+            "format": "date",
+            "title": "Evaluation Freeze"
+          },
+          "source_complete_through": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Complete Through"
+          },
+          "quality": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Quality"
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Features"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/RunInfo"
+            },
+            "type": "array",
+            "title": "Runs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model_version",
+          "source_release_id",
+          "event_release_id",
+          "feature_origin",
+          "dataset_sha256",
+          "model_sha256",
+          "feature_schema_sha256",
+          "trained_at",
+          "evaluation_freeze",
+          "source_complete_through",
+          "quality",
+          "features",
+          "limitations",
+          "runs"
+        ],
+        "title": "ModelStatus"
+      },
+      "Overview": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "const": "SYNTHETIC",
+            "title": "Data Mode",
+            "default": "SYNTHETIC"
+          },
+          "not_real_world_performance": {
+            "type": "boolean",
+            "const": true,
+            "title": "Not Real World Performance",
+            "default": true
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "score_cutoff": {
+            "type": "string",
+            "format": "date",
+            "title": "Score Cutoff"
+          },
+          "trained_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Trained At"
+          },
+          "customers": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Customers"
+          },
+          "average_precision": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Average Precision"
+          },
+          "baseline_average_precision": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Baseline Average Precision"
+          },
+          "roc_auc": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Roc Auc"
+          },
+          "brier": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Brier"
+          },
+          "recall_at_10pct": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Recall At 10Pct"
+          },
+          "log_loss": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Log Loss"
+          },
+          "observed_churn_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Observed Churn Rate"
+          },
+          "mean_predicted_risk": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Mean Predicted Risk"
+          },
+          "high_risk_customers": {
+            "type": "integer",
+            "title": "High Risk Customers"
+          },
+          "review_capacity": {
+            "type": "integer",
+            "title": "Review Capacity"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model_version",
+          "score_cutoff",
+          "trained_at",
+          "customers",
+          "average_precision",
+          "baseline_average_precision",
+          "roc_auc",
+          "brier",
+          "recall_at_10pct",
+          "log_loss",
+          "observed_churn_rate",
+          "mean_predicted_risk",
+          "high_risk_customers",
+          "review_capacity",
+          "limitations"
+        ],
+        "title": "Overview"
+      },
+      "Ready": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status",
+            "default": "ok"
+          },
+          "data_mode": {
+            "type": "string",
+            "const": "SYNTHETIC",
+            "title": "Data Mode",
+            "default": "SYNTHETIC"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model_version"
+        ],
+        "title": "Ready"
+      },
+      "RiskItem": {
+        "properties": {
+          "customer_id": {
+            "type": "string",
+            "pattern": "^SYN-[0-9]{5,7}$",
+            "title": "Customer Id"
+          },
+          "as_of_date": {
+            "type": "string",
+            "format": "date",
+            "title": "As Of Date"
+          },
+          "churn_probability": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Churn Probability"
+          },
+          "risk_band": {
+            "type": "string",
+            "enum": [
+              "high",
+              "watch",
+              "low"
+            ],
+            "title": "Risk Band"
+          },
+          "active_days_30d": {
+            "type": "integer",
+            "title": "Active Days 30D"
+          },
+          "payment_failures_90d": {
+            "type": "integer",
+            "title": "Payment Failures 90D"
+          },
+          "tenure_months": {
+            "type": "integer",
+            "title": "Tenure Months"
+          },
+          "monthly_fee": {
+            "type": "number",
+            "title": "Monthly Fee"
+          },
+          "auto_renew": {
+            "type": "integer",
+            "title": "Auto Renew"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "customer_id",
+          "as_of_date",
+          "churn_probability",
+          "risk_band",
+          "active_days_30d",
+          "payment_failures_90d",
+          "tenure_months",
+          "monthly_fee",
+          "auto_renew"
+        ],
+        "title": "RiskItem"
+      },
+      "RiskPage": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "const": "SYNTHETIC",
+            "title": "Data Mode",
+            "default": "SYNTHETIC"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RiskItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model_version",
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "RiskPage"
+      },
+      "RunInfo": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "State"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "output_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Rows"
+          },
+          "elapsed_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elapsed Seconds"
+          },
+          "error_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Type"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "mode",
+          "state",
+          "started_at",
+          "finished_at",
+          "model_version",
+          "output_rows",
+          "elapsed_seconds",
+          "error_type"
+        ],
+        "title": "RunInfo"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Workspace": {
+        "properties": {
+          "overview": {
+            "$ref": "#/components/schemas/Overview"
+          },
+          "risk": {
+            "$ref": "#/components/schemas/RiskPage"
+          },
+          "cohorts": {
+            "$ref": "#/components/schemas/CohortPage"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ModelStatus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "overview",
+          "risk",
+          "cohorts",
+          "status"
+        ],
+        "title": "Workspace"
+      }
+    }
+  }
+}

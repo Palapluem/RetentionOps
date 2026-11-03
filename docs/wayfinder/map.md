@@ -16,13 +16,12 @@ Stack feature PRs on the reviewed foundation; preserve the original local Execut
 
 ## Decisions so far
 
-The temporal and product contract is being resolved in
-[Define temporal event, renewal-label, and analyst-serving contracts](https://github.com/Palapluem/RetentionOps/issues/6).
-This entry will become a closed-decision index when the contract is recorded and verified.
+- [Define temporal event, renewal-label, and analyst-serving contracts](https://github.com/Palapluem/RetentionOps/issues/6): resolved discrete-day revision/window/renewal semantics and four analyst journeys; see docs/EVENT_CONTRACT.md.
 
 ## Not yet specified
 
-KKBox access/terms and supported prospective label; GCP account/project/region/budget;
+The owner confirms no GCP account exists. KKBox access/terms and supported prospective
+label; GCP account/project/region/budget;
 approved deployment identities, final authentication and production release approval.
 
 ## Out of scope

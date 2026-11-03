@@ -4,8 +4,9 @@
 
 ```mermaid
 flowchart LR
-  G[Synthetic snapshot generator] --> V[Strict schema + temporal validation]
-  V --> R[(Content-addressed local raw release)]
+  G[Synthetic subscription events] --> K[Latest known revisions / point-in-time features]
+  K --> V[Strict schema + temporal validation]
+  V --> R[(Immutable event / CSV / Parquet release)]
   R --> T[Train-only scaling + Logistic Regression]
   T --> E[Validation/test and constant-prior comparison]
   T --> M[(Immutable model + manifest)]
@@ -13,23 +14,25 @@ flowchart LR
   M --> P
   P --> S[(SQLite active release + scores)]
   S --> A[Typed read-only FastAPI]
-  A --> U[Local smoke dashboard]
+  A --> U[Next.js analyst workspace]
 ```
 
-`data.py` owns source schema/intake; `training.py` owns the fixed evaluation protocol;
+`events.py` owns bitemporal event features; `data.py` owns snapshot schema/intake; `training.py` owns the fixed evaluation protocol;
 `pipeline.py` coordinates artifacts and lineage; `storage.py` owns publication transactions;
-`api.py` serves bounded results; `cli.py` explicitly runs work. Shared code is in
-`src/retentionops/`; introduce `apps/web/` and separate job entrypoints as those are built.
+`serving.py` reads consistent workspace views; `runs.py` records actual attempts;
+`api.py` serves bounded results and `apps/web/` provides Next.js/TypeScript. Shared Python is in
+`src/retentionops/`; separate cloud job entrypoints when those adapters are built.
 
 Data is generated at customer × cutoff grain. The entire source is validated before a raw
 release becomes visible. Models are written through a staging directory then renamed.
-SQLite commits manifest, predictions and the active pointer together. A request reads the
+SQLite commits manifest, features, predictions, active pointer and successful run state together. A request reads the
 active manifest and scores within one read transaction, preventing mixed model releases.
 
 Local constraints: one pipeline writer per root; CSV materializes in memory; SQLite serves
-small demos; no public authentication; no cloud scheduler; feature values are simulated,
-not computed from raw subscription/activity events. Provenance fields are checked but
-cannot independently prove that an external aggregate was generated correctly.
+small demos; no public authentication; no cloud scheduler; features are
+computed from simulated events on the `events` path. The legacy `all` path still simulates
+feature values directly. Source completeness is defined by the synthetic generator; an
+external source needs independent rights/schema/watermark verification.
 
 ## Target cloud architecture (planned)
 

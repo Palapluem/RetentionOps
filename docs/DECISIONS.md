@@ -15,5 +15,12 @@
 | 2026-11-03 | Target GCS/BigQuery/Cloud Run/Scheduler with OIDC | Managed batch architecture; no resource creation before account/region/budget/IAM approval |
 | 2026-11-03 | Keep shared Python under src until service boundaries exist | Avoid empty monorepo scaffolding; move entrypoints into apps/services when independently operated |
 
+
+| 2026-11-03 | Latest known contiguous event revisions before right-exclusive windows | Prevent obsolete revisions reappearing after corrections; day-grain synthetic semantics are explicit |
+| 2026-11-03 | Atomic features, scores, active pointer and successful job state | Reconcile keys as well as counts; failed attempts are recorded without replacing the prior result |
+| 2026-11-03 | One workspace read transaction; model-pinned customer details | Avoid cross-request mixed releases while keeping bounded paginated views |
+| 2026-11-03 | Next.js 16 / React 19 / Node 24+ and a server-only fixed proxy | Real analyst workflows without browser backend credentials; cloud service authentication remains a gate |
+| 2026-11-03 | Biome plus a small fail-closed OpenAPI schema type exporter | Remove dev-tool dependency chain affected by [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249); 0 known npm advisories after replacement, no unsafe major overrides; supported schema subset is tested |
+
 Revisit a decision when measured evidence changes its assumptions. Record that evidence and
 the relevant issue/PR; do not silently expand infrastructure or label semantics.

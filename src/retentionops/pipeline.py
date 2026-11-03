@@ -22,6 +22,7 @@ from .data import (
     ingest_snapshots,
     sha256_file,
 )
+from .runs import tracked_run
 from .storage import publish
 from .training import train_baseline
 
@@ -53,11 +54,14 @@ def run_event_pipeline(
     from .events import prepare_event_dataset
 
     root = root.resolve()
-    records, source = prepare_event_dataset(root, customers, seed, as_of)
-    return fit_and_publish(root, records, source, seed, as_of)
+    with tracked_run(root, "events") as run_id:
+        records, source = prepare_event_dataset(root, customers, seed, as_of)
+        return fit_and_publish(root, records, source, seed, as_of, run_id=run_id)
 
 
-def fit_and_publish(root: Path, records: list, source_manifest: dict, seed: int, as_of: date):
+def fit_and_publish(
+    root: Path, records: list, source_manifest: dict, seed: int, as_of: date, run_id=None
+):
     packages = {
         name: importlib.metadata.version(name)
         for name in ("numpy", "scipy", "scikit-learn", "joblib", "pydantic", "fastapi", "polars")
@@ -121,5 +125,5 @@ def fit_and_publish(root: Path, records: list, source_manifest: dict, seed: int,
         (version, r.customer_id, str(r.as_of_date), float(p))
         for r, p in zip(test, probabilities, strict=True)
     ]
-    publish(root, manifest, scores)
+    publish(root, manifest, scores, snapshots=records, run_id=run_id)
     return manifest
