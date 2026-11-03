@@ -6,6 +6,8 @@ import csv
 import json
 import math
 import random
+import re
+import shutil
 import tempfile
 from collections import defaultdict
 from datetime import date, timedelta
@@ -14,7 +16,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 import polars as pl
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from .data import CUTOFFS, LABEL_HORIZON_DAYS, SEED, Snapshot, sha256_file
 
@@ -57,6 +59,29 @@ class Event(BaseModel):
         return self
 
 
+def read_event_jsonl(path: Path) -> list[Event]:
+    """Read one strict JSONL event source and report malformed physical lines."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ValueError(f"Cannot read UTF-8 event source: {exc}") from exc
+    if not lines:
+        raise ValueError("Empty event source")
+    events = []
+    for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            raise ValueError(f"Blank JSONL row at line {line_number}")
+        try:
+            events.append(Event.model_validate_json(line))
+        except ValidationError as exc:
+            issues = "; ".join(
+                f"{'.'.join(map(str, error['loc']))}: {error['msg']}"
+                for error in exc.errors(include_input=False, include_url=False)
+            )
+            raise ValueError(f"Invalid event at JSONL line {line_number}: {issues}") from exc
+    return events
+
+
 def validate_events(events: list[Event], complete_through: date) -> None:
     if not events:
         raise ValueError("Empty event source")
@@ -75,6 +100,107 @@ def validate_events(events: list[Event], complete_through: date) -> None:
             raise ValueError("Logical event identity changed across revisions")
         if any(a.available_at > b.available_at for a, b in pairwise(rows)):
             raise ValueError("Revision availability must be monotonic")
+
+
+def event_quality_report(events: list[Event], complete_through: date) -> dict:
+    """Validate a source and return deterministic reconciliation evidence."""
+    validate_events(events, complete_through)
+    return {
+        "rows": len(events),
+        "logical_events": len({event.event_id for event in events}),
+        "customers": len({event.customer_id for event in events}),
+        "max_available_at": str(max(event.available_at for event in events)),
+        "revision_history": "contiguous-from-1",
+        "duplicate_event_revisions": 0,
+        "watermark_passed": True,
+    }
+
+
+_SOURCE_ID = re.compile(r"^[a-z][a-z0-9-]{0,39}$")
+_RELEASE_ID = re.compile(r"^(?P<source>[a-z][a-z0-9-]{0,39})-(?P<sha>[0-9a-f]{64})$")
+
+
+def ingest_event_source(
+    source_path: Path, root: Path, source_id: str, complete_through: date
+) -> dict:
+    """Validate and atomically publish a content-addressed synthetic event release."""
+    if not _SOURCE_ID.fullmatch(source_id):
+        raise ValueError(
+            "source-id must start with a lowercase letter and contain only a-z, 0-9, or hyphen"
+        )
+    source_path = Path(source_path).expanduser()
+    if not source_path.is_file():
+        raise ValueError("Event source file does not exist")
+    root = Path(root).resolve()
+    event_root = root / "data" / "events"
+    event_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=event_root, prefix=".staging-") as staging:
+        staged_release = Path(staging) / "release"
+        staged_release.mkdir()
+        staged_source = staged_release / "events.jsonl"
+        try:
+            shutil.copyfile(source_path, staged_source)
+        except OSError as exc:
+            raise ValueError(f"Cannot stage event source: {exc}") from exc
+        events = read_event_jsonl(staged_source)
+        quality = event_quality_report(events, complete_through)
+        checksum = sha256_file(staged_source)
+        release_id = f"{source_id}-{checksum}"
+        manifest = {
+            "source_release_id": release_id,
+            "source_id": source_id,
+            "sha256": checksum,
+            "source_type": "SYNTHETIC",
+            "schema_version": "subscription-events-v1",
+            "complete_through": str(complete_through),
+            "rows": len(events),
+            "quality": quality,
+            "rights": "Synthetic-only local intake; real customer sources are not approved by this contract",
+        }
+        (staged_release / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        release = event_root / release_id
+        if release.exists():
+            if (
+                not (release / "events.jsonl").is_file()
+                or sha256_file(release / "events.jsonl") != checksum
+                or json.loads((release / "manifest.json").read_text()) != manifest
+            ):
+                raise ValueError("Corrupt immutable event source release")
+            return manifest
+        staged_release.rename(release)
+    return manifest
+
+
+def load_event_source(root: Path, source_release_id: str) -> tuple[list[Event], dict]:
+    """Load a published event release only after verifying its content and manifest."""
+    release_match = _RELEASE_ID.fullmatch(source_release_id)
+    if not release_match:
+        raise ValueError("Invalid source release ID")
+    release = Path(root).resolve() / "data" / "events" / source_release_id
+    try:
+        manifest = json.loads((release / "manifest.json").read_text(encoding="utf-8"))
+        source = release / "events.jsonl"
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("Event source release is missing or has an invalid manifest") from exc
+    if not source.is_file() or sha256_file(source) != manifest.get("sha256"):
+        raise ValueError("Event source release checksum does not match its manifest")
+    events = read_event_jsonl(source)
+    if (
+        manifest.get("source_release_id") != source_release_id
+        or manifest.get("source_id") != release_match.group("source")
+        or manifest.get("source_type") != "SYNTHETIC"
+        or manifest.get("schema_version") != "subscription-events-v1"
+        or release_match.group("sha") != manifest.get("sha256")
+    ):
+        raise ValueError("Event source release identity or contract does not match its manifest")
+    try:
+        complete_through = date.fromisoformat(manifest["complete_through"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("Event source manifest has an invalid completeness watermark") from exc
+    quality = event_quality_report(events, complete_through)
+    if manifest.get("rows") != len(events) or manifest.get("quality") != quality:
+        raise ValueError("Event source release quality evidence does not reconcile")
+    return events, manifest
 
 
 def visible_versions(events: list[Event], cutoff: date) -> list[Event]:
@@ -255,65 +381,76 @@ def generate_events(path: Path, customers: int = 650, seed: int = SEED) -> int:
 
 
 def prepare_event_dataset(root: Path, customers: int, seed: int, freeze: date):
-    """Publish immutable event source and derived CSV/Parquet, returning validated snapshots."""
-    from .data import DEFAULT_AS_OF, ingest_snapshots
+    """Generate a demo source, then use the same intake and derivation stages as file input."""
+    from .data import DEFAULT_AS_OF
 
     if freeze > DEFAULT_AS_OF:
         raise ValueError("Synthetic source completeness ends on 2026-11-03")
     staging_root = root / "data/staging"
     staging_root.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=staging_root) as staging:
-        staged = Path(staging)
-        source = staged / "events.jsonl"
+        source = Path(staging) / "events.jsonl"
         generate_events(source, customers, seed)
-        events = [Event.model_validate_json(line) for line in source.read_text().splitlines()]
-        snapshots, quality = build_features(events, freeze, DEFAULT_AS_OF)
-        checksum = sha256_file(source)
-        event_release = root / "data/events" / checksum
-        manifest = {
-            "source_release_id": f"synthetic-events-{checksum}",
-            "sha256": checksum,
-            "source_type": "SYNTHETIC",
-            "schema_version": "subscription-events-v1",
-            "complete_through": str(DEFAULT_AS_OF),
-            "rows": len(events),
-            "rights": "Project-generated synthetic subscription events",
-        }
-        event_release.parent.mkdir(parents=True, exist_ok=True)
-        (staged / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-        if event_release.exists():
-            if (
-                sha256_file(event_release / "events.jsonl") != checksum
-                or json.loads((event_release / "manifest.json").read_text()) != manifest
-            ):
-                raise ValueError("Corrupt immutable event source")
-        else:
-            with tempfile.TemporaryDirectory(dir=event_release.parent) as tmp:
-                target = Path(tmp) / "release"
-                target.mkdir()
-                (target / "events.jsonl").write_bytes(source.read_bytes())
-                (target / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-                target.rename(event_release)
+        event_manifest = ingest_event_source(source, root, "synthetic-events", DEFAULT_AS_OF)
+    return prepare_features_from_release(root, event_manifest["source_release_id"], freeze)
+
+
+def prepare_features_from_release(root: Path, source_release_id: str, freeze: date):
+    """Derive and atomically publish features from a previously ingested event release."""
+    from .data import Snapshot, ingest_snapshots
+
+    events, event_manifest = load_event_source(root, source_release_id)
+    complete_through = date.fromisoformat(event_manifest["complete_through"])
+    snapshots, quality = build_features(events, freeze, complete_through)
+    root = Path(root).resolve()
+    staging_root = root / "data" / "staging"
+    staging_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=staging_root) as staging:
+        staged = Path(staging)
         csv_path = staged / "snapshots.csv"
         with csv_path.open("w", newline="", encoding="utf-8") as handle:
             writer = csv.DictWriter(handle, fieldnames=list(Snapshot.model_fields))
             writer.writeheader()
             writer.writerows(r.model_dump(mode="json") for r in snapshots)
         records, source_manifest = ingest_snapshots(csv_path, root, freeze)
-        feature_release = root / "data/features" / source_manifest["dataset_sha256"]
-        feature_release.mkdir(parents=True, exist_ok=True)
+        features_root = root / "data" / "features"
+        features_root.mkdir(parents=True, exist_ok=True)
+        feature_release = features_root / source_manifest["dataset_sha256"]
         parquet = staged / "features.parquet"
         pl.DataFrame([r.model_dump() for r in records]).write_parquet(parquet)
-        destination = feature_release / "features.parquet"
-        if destination.exists() and sha256_file(destination) != sha256_file(parquet):
-            raise ValueError("Corrupt or non-reproducible feature Parquet")
-        if not destination.exists():
-            parquet.rename(destination)
-        source_manifest = {
-            **source_manifest,
-            "events": manifest,
+        parquet_hash = sha256_file(parquet)
+        feature_manifest = {
+            "feature_release_id": source_manifest["dataset_sha256"],
+            "source_release_id": event_manifest["source_release_id"],
+            "source_sha256": event_manifest["sha256"],
+            "dataset_sha256": source_manifest["dataset_sha256"],
+            "feature_parquet_sha256": parquet_hash,
+            "rows": len(records),
             "quality": quality,
-            "feature_parquet_sha256": sha256_file(destination),
-            "feature_origin": "Event-derived point-in-time subscription aggregates",
+            "schema_version": "event-features-v1",
+            "source_type": "SYNTHETIC",
         }
-        return records, source_manifest
+        staged_feature_release = staged / "feature-release"
+        staged_feature_release.mkdir()
+        parquet.rename(staged_feature_release / "features.parquet")
+        (staged_feature_release / "manifest.json").write_text(
+            json.dumps(feature_manifest, indent=2) + "\n"
+        )
+        if feature_release.exists():
+            if (
+                not (feature_release / "features.parquet").is_file()
+                or sha256_file(feature_release / "features.parquet") != parquet_hash
+                or json.loads((feature_release / "manifest.json").read_text()) != feature_manifest
+            ):
+                raise ValueError("Corrupt or non-reproducible feature release")
+        else:
+            staged_feature_release.rename(feature_release)
+    source_manifest = {
+        **source_manifest,
+        "events": event_manifest,
+        "quality": quality,
+        "feature_release_id": source_manifest["dataset_sha256"],
+        "feature_parquet_sha256": parquet_hash,
+        "feature_origin": "Event-derived point-in-time subscription aggregates",
+    }
+    return records, source_manifest

@@ -2,8 +2,9 @@
 
 ## Authorized source boundary
 
-The runnable path uses project-generated synthetic snapshots. No external customer data
-was downloaded, no Kaggle agreement accepted and no KKBox use right established here.
+The runnable paths use project-generated synthetic snapshots/events. The event pipeline can
+also accept a file only when every row conforms to the synthetic event contract below. No
+external customer data was downloaded, no Kaggle agreement accepted and no KKBox use right established here.
 The [official KKBox rules page](https://www.kaggle.com/competitions/kkbox-churn-prediction-challenge/rules)
 did not expose readable rule text during inspection. An authenticated manual terms review
 must establish access, purpose, cloud processing and redistribution restrictions first.
@@ -41,10 +42,14 @@ observations; a prior positive does not remove a customer from later cohorts.
 
 ## Lineage and storage
 
-`data/raw/synthetic-{full_sha256}/` contains immutable CSV + manifest: source release ID,
-dataset hash, schema version, row count, cutoffs, source mode and rights statement. Identical
-content reuses one release. Validate before publication. Corrupt existing content fails;
-never silently overwrite it. Invalid input creates no new published source release.
+`data/raw/synthetic-{full_sha256}/` contains immutable snapshot CSV + manifest. Event input is
+published under `data/events/{source_id}-{full_sha256}/` with the original JSONL bytes and a
+deterministic manifest containing source identity, contract version, completeness watermark,
+hash, row/logical-event/customer counts, revision and watermark checks, and synthetic-only
+rights. The source file is copied to staging and validated before an atomic directory rename.
+Identical content and metadata reuse one release. Corrupt existing content fails; invalid
+input creates no new published release. Feature Parquet is content-addressed under
+`data/features/{dataset_sha256}/`, with its own manifest linking back to the event release.
 
 Prediction key: `(model_version, customer_id, as_of_date)`. One active release serves the API;
 older predictions remain available locally for audit. Reconcile published rows to test rows.
@@ -52,11 +57,16 @@ Generated source/model/SQLite files and the original Execution Kit are ignored b
 
 ## Event-derived implementation
 
-`retentionops events` now derives these fields from versioned synthetic raw events, writes
-typed-date Parquet with Polars, and retains source/quality hashes in the model manifest.
-Its independent fixtures exercise feature window boundaries, late revisions, tombstones,
-renewal boundaries, completeness and eligibility. See [EVENT_CONTRACT.md](EVENT_CONTRACT.md).
-The metadata-only limitation above still applies to the legacy `retentionops all` path.
+`retentionops generate-events`, `retentionops ingest-events`, and `retentionops run-events`
+expose source generation, validated intake, and replay as separate commands. The one-command
+`retentionops events` path uses those same stages. Features are derived from versioned
+synthetic raw events, written as typed-date Parquet with Polars, and linked by hashes and
+quality counts in the model manifest. Tests cover malformed/duplicate/watermark failures,
+idempotent intake, replay, feature windows, late revisions, tombstones, renewal boundaries,
+completeness and eligibility. See [EVENT_CONTRACT.md](EVENT_CONTRACT.md). This contract is
+synthetic-only; real source identity mapping, source-specific schemas, licensing, and
+GCS/BigQuery adapters remain open. The metadata-only limitation still applies to legacy
+`retentionops all`.
 
 ## Future real-data contract
 

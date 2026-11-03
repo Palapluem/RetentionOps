@@ -57,6 +57,17 @@ def run_event_pipeline(
     return fit_and_publish(root, records, source, seed, as_of)
 
 
+def run_event_source_pipeline(
+    root: Path, source_release_id: str, seed: int = SEED, as_of: date = DEFAULT_AS_OF
+) -> dict:
+    """Run features, temporal evaluation and publication from an ingested source release."""
+    from .events import prepare_features_from_release
+
+    root = root.resolve()
+    records, source = prepare_features_from_release(root, source_release_id, as_of)
+    return fit_and_publish(root, records, source, seed, as_of)
+
+
 def fit_and_publish(root: Path, records: list, source_manifest: dict, seed: int, as_of: date):
     packages = {
         name: importlib.metadata.version(name)

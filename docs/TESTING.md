@@ -2,7 +2,7 @@
 
 | Boundary | Evidence required |
 |---|---|
-| Source generation/intake | Seeded byte determinism; exact schema; no null/nonfinite/range errors; unique grain |
+| Source generation/intake | Seeded byte determinism; strict JSONL/event contract; identity, hash, revision and watermark checks; idempotent replay; failed intake publishes no release |
 | Time | Negative fixtures for future event/availability, immature label, unavailable prior-cohort label |
 | Training | Explicit calendar cohorts, both classes, scaler fitted on train, fixed baseline comparison |
 | Artifact/lineage | Model/data/code/config/dependency identity; checksum corruption rejected; serialized model scores reconcile |

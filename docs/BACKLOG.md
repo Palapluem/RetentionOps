@@ -9,12 +9,14 @@ evidence, branch and PR before implementation.
 Created follow-ups:
 [Verify cloud readiness and review a bounded GCP resource plan](https://github.com/Palapluem/RetentionOps/issues/2)
 and [Derive synthetic features from subscription events with point-in-time tests](https://github.com/Palapluem/RetentionOps/issues/3).
-Both are open work, not completed implementation.
+The local intake follow-up [Add replayable local event-source ingestion](https://github.com/Palapluem/RetentionOps/issues/10)
+now separates source generation, quality-gated intake, and replayable feature/model execution;
+it remains under PR review.
 
 | Planned period | Next deliverable | Dependency / acceptance |
 |---|---|---|
 | Nov 4 foundation | Review Day 1 PR, establish governance and source rights gate | Local evidence + CI; confirm branch rules/board support; record approved data rights |
-| Nov 5 data platform | GCS versioned intake and BigQuery bronze | Concrete cloud budget/IAM approval; source hashes/counts; idempotent replay |
+| Nov 5 data platform | Local event-source intake is implemented; GCS versioned intake and BigQuery bronze remain | Cloud project, source rights, budget and IAM approval; source hashes/counts; idempotent replay |
 | Nov 6 features | Subscription events, normalization, PIT feature snapshots | Actual source contract; independent event/correction cutoff fixtures |
 | Nov 9 ML | LightGBM comparison, experiment tracking and batch scoring | Validation-only selection, artifact provenance, warehouse unique keys |
 | Nov 10 backend | Governed warehouse views, access controls, Cloud Run API | Least-privilege identity, auth denial and query-cost bounds |
@@ -22,7 +24,8 @@ Both are open work, not completed implementation.
 | Nov 12 reliability | OIDC deployment, schedule/monitoring, recovery/cost drills | Actual run/revision IDs and failure/recovery evidence |
 | Nov 13 release | Clean checkout, human audit, model card, demo | All P0 gates pass before v0.1.0 |
 
-Independent work while cloud is unavailable: event-based synthetic generator, feature-window
-and late-arrival tests, local Parquet/source contracts and cloud adapter tests using an
-explicit fake boundary. Fakes must never be labeled as Google Cloud integration evidence.
+Independent work while cloud is unavailable: event-based synthetic generator, replayable
+local intake, feature-window and late-arrival tests, local Parquet/source contracts and cloud
+adapter tests using an explicit fake boundary. Fakes must never be labeled as Google Cloud
+integration evidence.
 Do not let the calendar bypass correctness, rights, privacy or release gates.

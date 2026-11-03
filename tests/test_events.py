@@ -1,11 +1,20 @@
+import hashlib
+import json
 from datetime import date, timedelta
 
 import polars as pl
 import pytest
 
 from retentionops.data import DEFAULT_AS_OF
-from retentionops.events import Event, build_features, generate_events, validate_events
-from retentionops.pipeline import run_event_pipeline
+from retentionops.events import (
+    Event,
+    build_features,
+    generate_events,
+    ingest_event_source,
+    load_event_source,
+    validate_events,
+)
+from retentionops.pipeline import run_event_pipeline, run_event_source_pipeline
 from retentionops.training import temporal_split
 
 CUTOFF = date(2026, 6, 30)
@@ -221,6 +230,104 @@ def test_event_bytes_and_pipeline_replay(tmp_path):
     parquet = next((tmp_path / "data/features").glob("*/features.parquet"))
     assert pl.read_parquet(parquet).height == 600
     assert pl.read_parquet_schema(parquet)["as_of_date"] == pl.Date
+
+
+def test_local_source_intake_is_content_addressed_and_reconciled(tmp_path):
+    source = tmp_path / "incoming.jsonl"
+    generate_events(source, 100)
+    first_event = Event.model_validate_json(source.read_text().splitlines()[0])
+    correction = first_event.model_copy(
+        update={
+            "revision": 2,
+            "available_at": first_event.available_at + timedelta(days=1),
+        }
+    )
+    with source.open("a", encoding="utf-8") as handle:
+        handle.write(correction.model_dump_json() + "\n")
+    payload = source.read_bytes()
+
+    first = ingest_event_source(source, tmp_path / "workspace", "sample-feed", DEFAULT_AS_OF)
+    second = ingest_event_source(source, tmp_path / "workspace", "sample-feed", DEFAULT_AS_OF)
+    events, manifest = load_event_source(tmp_path / "workspace", first["source_release_id"])
+
+    release = tmp_path / "workspace/data/events" / first["source_release_id"]
+    assert first == second == manifest
+    assert first["source_type"] == "SYNTHETIC"
+    assert first["sha256"] == hashlib.sha256(payload).hexdigest()
+    assert first["quality"]["rows"] == len(events) == first["rows"]
+    assert first["quality"]["logical_events"] < first["rows"]
+    assert first["quality"]["watermark_passed"] is True
+    assert (release / "events.jsonl").read_bytes() == payload
+
+
+@pytest.mark.parametrize(
+    "invalid_source", ["malformed", "blank", "duplicate", "watermark", "extra-field"]
+)
+def test_failed_local_intake_publishes_no_release(tmp_path, invalid_source):
+    source = tmp_path / "incoming.jsonl"
+    generate_events(source, 50)
+    rows = source.read_text().splitlines()
+    if invalid_source == "malformed":
+        rows.append("not-json")
+    elif invalid_source == "blank":
+        rows.append("")
+    elif invalid_source == "duplicate":
+        rows.append(rows[0])
+    elif invalid_source == "extra-field":
+        invalid_event = json.loads(rows[0])
+        invalid_event["private_marker"] = "synthetic-private-marker"
+        rows.append(json.dumps(invalid_event))
+    else:
+        rows.append(
+            Event(
+                event_id="SYN-outside-watermark",
+                customer_id="SYN-00000",
+                kind="activity",
+                occurred_at=date(2026, 11, 4),
+                available_at=date(2026, 11, 4),
+            ).model_dump_json()
+        )
+    source.write_text("\n".join(rows) + "\n")
+
+    with pytest.raises(ValueError) as caught:
+        ingest_event_source(source, tmp_path / "workspace", "sample-feed", DEFAULT_AS_OF)
+    if invalid_source == "extra-field":
+        assert "synthetic-private-marker" not in str(caught.value)
+    event_root = tmp_path / "workspace/data/events"
+    assert not [path for path in event_root.iterdir() if path.is_dir()]
+
+
+def test_corrupt_published_event_release_fails_closed(tmp_path):
+    source = tmp_path / "incoming.jsonl"
+    generate_events(source, 50)
+    manifest = ingest_event_source(source, tmp_path / "workspace", "sample-feed", DEFAULT_AS_OF)
+    published_source = (
+        tmp_path / "workspace/data/events" / manifest["source_release_id"] / "events.jsonl"
+    )
+    published_source.write_bytes(published_source.read_bytes() + b"corruption\n")
+
+    with pytest.raises(ValueError, match="Corrupt immutable event source"):
+        ingest_event_source(source, tmp_path / "workspace", "sample-feed", DEFAULT_AS_OF)
+    with pytest.raises(ValueError, match="checksum"):
+        load_event_source(tmp_path / "workspace", manifest["source_release_id"])
+
+
+def test_event_pipeline_replays_an_ingested_source_without_regeneration(tmp_path):
+    source = tmp_path / "incoming.jsonl"
+    generate_events(source, 150, seed=71)
+    event_release = ingest_event_source(source, tmp_path, "owner-upload", DEFAULT_AS_OF)
+
+    first = run_event_source_pipeline(tmp_path, event_release["source_release_id"])
+    second = run_event_source_pipeline(tmp_path, event_release["source_release_id"])
+
+    assert first == second
+    assert first["source"]["events"]["source_release_id"] == event_release["source_release_id"]
+    assert first["source"]["events"]["sha256"] == event_release["sha256"]
+    assert first["source"]["quality"]["eligible_rows"] == 600
+    feature_release = tmp_path / "data/features" / first["source"]["feature_release_id"]
+    feature_manifest = json.loads((feature_release / "manifest.json").read_text())
+    assert feature_manifest["source_release_id"] == event_release["source_release_id"]
+    assert feature_manifest["rows"] == 600
 
 
 def test_late_labels_cannot_silently_enter_train(csv_path):
