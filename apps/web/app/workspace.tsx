@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   type Cohort,
   type Customer,
+  type JobPage,
   number,
   percent,
   type Risk,
@@ -445,46 +446,11 @@ function StatusView({ data }: { data: WorkspaceData }) {
           <h2>Recent pipeline runs</h2>
           <span className="subtle-label">Actual local job attempts</span>
         </div>
-        {s.runs.length ? (
-          <ScrollArea label="Pipeline run history">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Started</th>
-                  <th scope="col">Pipeline</th>
-                  <th scope="col">State</th>
-                  <th scope="col">Scored rows</th>
-                  <th scope="col">Duration</th>
-                  <th scope="col">Error type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {s.runs.map((run) => (
-                  <tr key={run.run_id}>
-                    <td>{timestamp(run.started_at)}</td>
-                    <td>{run.mode === "events" ? "Event pipeline" : run.mode}</td>
-                    <td>
-                      <span
-                        className={`badge ${run.state === "succeeded" ? "low" : run.state === "failed" ? "high" : "watch"}`}
-                      >
-                        {run.state}
-                      </span>
-                    </td>
-                    <td>{run.output_rows === null ? "—" : number(run.output_rows)}</td>
-                    <td>
-                      {run.elapsed_seconds === null
-                        ? "In progress"
-                        : `${run.elapsed_seconds.toFixed(2)}s`}
-                    </td>
-                    <td>{run.error_type || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </ScrollArea>
-        ) : (
-          <p>No pipeline run history has been recorded for this publication.</p>
-        )}
+        <RunHistoryTable
+          runs={s.runs}
+          label="Pipeline run history"
+          emptyMessage="No pipeline run history has been recorded for this publication."
+        />
         <p className="caption">
           A failed attempt preserves the last successful publication. Job completion time and
           historical data cutoff describe different kinds of freshness.
@@ -499,6 +465,56 @@ function StatusView({ data }: { data: WorkspaceData }) {
         </ul>
       </section>
     </>
+  );
+}
+
+function RunHistoryTable({
+  runs,
+  label,
+  emptyMessage,
+}: {
+  runs: JobPage["items"];
+  label: string;
+  emptyMessage: string;
+}) {
+  if (!runs.length) return <p>{emptyMessage}</p>;
+  return (
+    <ScrollArea label={label}>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Started</th>
+            <th scope="col">Pipeline</th>
+            <th scope="col">State</th>
+            <th scope="col">Scored rows</th>
+            <th scope="col">Duration</th>
+            <th scope="col">Error type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {runs.map((run) => (
+            <tr key={run.run_id}>
+              <td>{timestamp(run.started_at)}</td>
+              <td>{run.mode === "events" ? "Event pipeline" : run.mode}</td>
+              <td>
+                <span
+                  className={`badge ${run.state === "succeeded" ? "low" : run.state === "failed" ? "high" : "watch"}`}
+                >
+                  {run.state}
+                </span>
+              </td>
+              <td>{run.output_rows === null ? "—" : number(run.output_rows)}</td>
+              <td>
+                {run.elapsed_seconds === null
+                  ? "In progress"
+                  : `${run.elapsed_seconds.toFixed(2)}s`}
+              </td>
+              <td>{run.error_type || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </ScrollArea>
   );
 }
 
@@ -517,6 +533,7 @@ export default function Workspace({ view }: { view: View }) {
     key: string;
     data?: WorkspaceData;
     error?: string;
+    jobs?: JobPage;
   } | null>(null);
   const [detail, setDetail] = useState<DetailState>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -540,7 +557,17 @@ export default function Workspace({ view }: { view: View }) {
         if (!controller.signal.aborted) setResult({ key, data });
       })
       .catch((error) => {
-        if (!controller.signal.aborted) setResult({ key, error: error.message });
+        if (controller.signal.aborted) return;
+        const message =
+          error instanceof Error ? error.message : "Published results are unavailable.";
+        setResult({ key, error: message });
+        readData<JobPage>("jobs", controller.signal)
+          .then((jobs) => {
+            if (!controller.signal.aborted) setResult({ key, error: message, jobs });
+          })
+          .catch(() => {
+            // Keep the primary workspace error visible when independent history is also unavailable.
+          });
       });
     return () => controller.abort();
   }, [path, key]);
@@ -573,9 +600,26 @@ export default function Workspace({ view }: { view: View }) {
             Retry
           </button>
           <p className="caption">
-            The last publication remains unchanged. Retry when the data service is available.
+            {current.jobs?.publication_present === false
+              ? "No successful publication exists yet. Retry after a valid pipeline run completes."
+              : current.jobs?.publication_present
+                ? "The last successful publication remains active. Retry when the data service is available."
+                : "Publication state could not be confirmed. Retry when the data service is available."}
           </p>
         </section>
+        {current.jobs && (
+          <section className="panel">
+            <div className="section-heading">
+              <h2>Latest pipeline attempts</h2>
+              <span className="subtle-label">Actual local job history</span>
+            </div>
+            <RunHistoryTable
+              runs={current.jobs.items}
+              label="Latest pipeline attempts"
+              emptyMessage="No pipeline attempt has been recorded."
+            />
+          </section>
+        )}
       </Frame>
     );
 

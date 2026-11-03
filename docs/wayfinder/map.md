@@ -9,10 +9,10 @@ versioned scores into an analyst workspace, with tested local/container/CI deliv
 
 ## Notes
 
-The owner authorized execution after decisions on 2026-11-03. Use Wayfinder,
-codebase-design, find-docs, frontend-design and React/Next.js best practices. Continue safe
-local implementation while source rights and paid cloud approval remain external gates.
-Stack feature PRs on the reviewed foundation; preserve the original local Execution Kit.
+The owner authorized execution after decisions on 2026-11-03. Local synthetic delivery now
+covers event-derived features, evaluated scoring and an analyst workspace. Implementation is
+in stacked review: foundation PR #4, event PR #8, analyst workspace PR #9. Preserve the
+original local Execution Kit outside Git and Docker contexts.
 
 ## Decisions so far
 
@@ -20,9 +20,11 @@ Stack feature PRs on the reviewed foundation; preserve the original local Execut
 
 ## Not yet specified
 
-The owner confirms no GCP account exists. KKBox access/terms and supported prospective
-label; GCP account/project/region/budget;
-approved deployment identities, final authentication and production release approval.
+The owner confirms no GCP account exists. KKBox access/terms and a supported prospective
+label; account/project/region/budget; deployment identity, final authentication and production
+release approval remain open gates. Issue #2, [Verify cloud readiness and review a bounded
+GCP resource plan](https://github.com/Palapluem/RetentionOps/issues/2), has a plan and Thai
+onboarding guide but requires owner account setup before live readiness can be verified.
 
 ## Out of scope
 

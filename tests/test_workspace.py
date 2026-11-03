@@ -96,6 +96,21 @@ def test_job_success_failure_and_publication_are_reconciled(tmp_path):
         assert active_manifest(conn) == first
 
 
+def test_first_failure_status_is_available_without_publication(tmp_path):
+    client = TestClient(create_app(tmp_path))
+    assert client.get("/api/v1/jobs").json() == {"publication_present": False, "items": []}
+    assert not (tmp_path / "artifacts/serving.sqlite").exists()
+    with pytest.raises(ValueError, match="Immature"):
+        run_event_pipeline(tmp_path, customers=150, as_of=date(2026, 10, 1))
+    assert client.get("/ready").status_code == 503
+    response = client.get("/api/v1/jobs")
+    assert response.status_code == 200
+    status = response.json()
+    assert status["publication_present"] is False
+    assert status["items"][0]["state"] == "failed"
+    assert status["items"][0]["error_type"] == "ValueError"
+
+
 def test_missing_features_fail_readiness(publication):
     root, _ = publication
     with sqlite3.connect(root / "artifacts/serving.sqlite") as conn:

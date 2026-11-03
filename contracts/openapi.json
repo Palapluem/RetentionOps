@@ -295,6 +295,24 @@
         }
       }
     },
+    "/api/v1/jobs": {
+      "get": {
+        "summary": "Jobs",
+        "operationId": "jobs_api_v1_jobs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/customers/{customer_id}": {
       "get": {
         "summary": "Customer",
@@ -541,6 +559,28 @@
         "additionalProperties": false,
         "type": "object",
         "title": "Health"
+      },
+      "JobPage": {
+        "properties": {
+          "publication_present": {
+            "type": "boolean",
+            "title": "Publication Present"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RunInfo"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "publication_present",
+          "items"
+        ],
+        "title": "JobPage"
       },
       "ModelStatus": {
         "properties": {

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-const resources = new Set(["workspace", "overview", "risk", "cohorts", "model-status"]);
+const resources = new Set(["workspace", "overview", "risk", "cohorts", "model-status", "jobs"]);
 const queries = new Set(["limit", "offset", "search", "band", "auto_renew", "model_version"]);
 
 export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {

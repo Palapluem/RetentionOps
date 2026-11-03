@@ -89,6 +89,11 @@ class RunInfo(Contract):
     error_type: str | None
 
 
+class JobPage(Contract):
+    publication_present: bool
+    items: list[RunInfo]
+
+
 class ModelStatus(Contract):
     data_mode: Literal["SYNTHETIC"] = "SYNTHETIC"
     model_version: str
@@ -258,6 +263,21 @@ def model_status(conn, manifest):
         limitations=manifest["limitations"],
         runs=[RunInfo(**dict(r)) for r in runs],
     )
+
+
+def jobs(conn):
+    tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    runs = (
+        conn.execute("SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT 10").fetchall()
+        if "pipeline_runs" in tables
+        else []
+    )
+    publication = (
+        bool(conn.execute("SELECT 1 FROM active_release WHERE slot=1").fetchone())
+        if "active_release" in tables
+        else False
+    )
+    return JobPage(publication_present=publication, items=[RunInfo(**dict(row)) for row in runs])
 
 
 def customer(conn, customer_id, version=None):

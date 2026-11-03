@@ -4,6 +4,7 @@ export type WorkspaceData = components["schemas"]["Workspace"];
 export type Risk = components["schemas"]["RiskItem"];
 export type Cohort = components["schemas"]["Cohort"];
 export type Customer = components["schemas"]["CustomerDetail"];
+export type JobPage = components["schemas"]["JobPage"];
 
 export async function readData<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`/api/retention/${path}`, { signal, cache: "no-store" });

@@ -15,6 +15,10 @@ snapshot กับรายงานคุณภาพ Interface นี้ใช
 เพราะเป็นคนละนิยามกัน `available_at` บอกว่าเรารู้ event เมื่อไร ต่างจากวันเกิด event
 ส่วน watermark บอกว่าข้อมูลครอบคลุมถึงวันใด จึงจะสรุปว่าไม่มี renewal ได้อย่างมีเงื่อนไข
 renewal ที่ส่งมาช้าต้องเลื่อน label availability และอาจไม่ผ่าน embargo ของ cohort ถัดไป
+กรณีแก้ไขที่ลบ renewal ออกจากช่วงเวลา (เช่นเปลี่ยน `occurred_at`, `expiry_date` หรือ
+tombstone) ก็ต้องเลื่อน availability เช่นกัน เพราะค่าป้าย churn ปัจจุบันอาศัย correction
+ที่เพิ่งรู้ หากนับเฉพาะ revision ล่าสุดที่ยังเข้า window ข้อมูลอนาคตจะรั่วเข้าชุด train
+โดยไม่เห็นวันแก้ไข จึงเพิ่ม fixture หลาย cohort ที่ให้ `temporal_split` ปฏิเสธกรณีนี้
 
 รัน `retentionops events --customers 650` เพื่อสร้าง raw JSONL → validated features
 → CSV/Parquet → โมเดล/metrics → scores โดย Parquet เก็บวันเป็น DATE ไม่ใช่ข้อความ
@@ -123,6 +127,8 @@ publisher ต้อง reject และ readiness ต้องไม่ผ่า
 `runs.py` บันทึก job attempts จริง โดย successful state commit พร้อม publication ส่วน
 exception บันทึก failed แล้วเก็บ active result เดิม การหยุด process แบบ kill ยังต้องดู
 run ที่ค้าง running และ replay ด้วยผู้ปฏิบัติ ไม่ใช่อ้างว่าเป็น durable cloud orchestration
+API `/api/v1/jobs` อ่านประวัติ attempt ได้แยกจาก active publication เพื่อให้ผู้ใช้เห็น
+ความล้มเหลวครั้งแรกตอนยังไม่มี release; หน้า error จะบอกสถานะ publication จากข้อมูลนี้
 
 Next.js อยู่ใน `apps/web/` ใช้ TypeScript, React และ CSS ที่ควบคุมจาก tokens เดียว
 เลือกเพราะเหมาะกับ UI หลายหน้าที่เชื่อม typed backend และสร้าง production container ได้

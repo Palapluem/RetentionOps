@@ -86,6 +86,45 @@ test("upstream error and retry are explicit", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Ranked subscribers" })).toBeVisible();
 });
 
+test("first failed pipeline remains visible when no publication exists", async ({ page }) => {
+  await page.route("**/api/retention/workspace*", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "No valid publication." }),
+    }),
+  );
+  await page.route("**/api/retention/jobs", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        publication_present: false,
+        items: [
+          {
+            run_id: "run-first-failure",
+            mode: "events",
+            state: "failed",
+            started_at: "2026-11-03T04:00:00+00:00",
+            finished_at: "2026-11-03T04:00:01+00:00",
+            elapsed_seconds: 1,
+            output_rows: null,
+            error_type: "ValueError",
+          },
+        ],
+      }),
+    }),
+  );
+  await page.goto("/status");
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "Results could not be loaded",
+  );
+  await expect(page.getByText("No successful publication exists yet.")).toBeVisible();
+  const history = page.getByRole("region", { name: "Latest pipeline attempts" });
+  await expect(history).toContainText("failed");
+  await expect(history).toContainText("ValueError");
+});
+
 test("loading state is announced while a response is pending", async ({ page }) => {
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {

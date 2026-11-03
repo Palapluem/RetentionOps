@@ -79,6 +79,12 @@ def create_app(root: Path | None = None) -> FastAPI:
     def workspace(criteria: Annotated[dict, Depends(risk_filters)]):
         return read(serving.workspace, **criteria)
 
+    @application.get("/api/v1/jobs", response_model=serving.JobPage)
+    def jobs():
+        if not (data_root / "artifacts/serving.sqlite").exists():
+            return serving.JobPage(publication_present=False, items=[])
+        return read(serving.jobs)
+
     @application.get("/api/v1/customers/{customer_id}", response_model=CustomerDetail)
     def customer(
         customer_id: Annotated[str, PathParam(pattern=r"^SYN-[0-9]{5,7}$")],
