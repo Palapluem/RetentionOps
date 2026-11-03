@@ -13,8 +13,13 @@ Implementation PRs remain unmerged until owner review of their GitHub diffs and 
 - [Build an API-backed Next.js retention analyst workspace](https://github.com/Palapluem/RetentionOps/issues/7)
   — PR #9, stacked on the event PR; local browser and container evidence is recorded.
 
-The branches are ordered foundation → event features → analyst workspace. Review each PR on
-its own base; merge the foundation before the event PR and the event PR before the workspace.
+The branches are ordered foundation → event features → analyst workspace. Merge [ROP-001 —
+Establish engineering foundation and verified synthetic vertical slice](https://github.com/Palapluem/RetentionOps/issues/1)
+first, then retarget [ROP-003 — Derive synthetic features from subscription events with
+point-in-time tests](https://github.com/Palapluem/RetentionOps/issues/3) to `main` before
+merging it. After that, retarget [Build an API-backed Next.js retention analyst
+workspace](https://github.com/Palapluem/RetentionOps/issues/7) to `main` before merging it.
+This keeps each review diff limited to its own layer.
 
 ## Open external readiness gate
 

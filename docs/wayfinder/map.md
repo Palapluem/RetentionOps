@@ -18,6 +18,14 @@ tests](https://github.com/Palapluem/RetentionOps/pull/8), then [Build an API-bac
 retention analyst workspace](https://github.com/Palapluem/RetentionOps/pull/9). Preserve the
 original local Execution Kit outside Git and Docker contexts.
 
+After [ROP-001 — Establish engineering foundation and verified synthetic vertical
+slice](https://github.com/Palapluem/RetentionOps/issues/1) merges to `main`, retarget [ROP-003
+— Derive synthetic features from subscription events with point-in-time
+tests](https://github.com/Palapluem/RetentionOps/issues/3) to `main` before merging. After
+that, retarget [Build an API-backed Next.js retention analyst
+workspace](https://github.com/Palapluem/RetentionOps/issues/7) to `main` before merging. That
+keeps each review diff focused on its own layer.
+
 ## Decisions so far
 
 - [Define temporal event, renewal-label, and analyst-serving contracts](https://github.com/Palapluem/RetentionOps/issues/6): resolved discrete-day revision/window/renewal semantics and four analyst journeys; see docs/EVENT_CONTRACT.md.
