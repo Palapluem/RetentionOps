@@ -18,7 +18,6 @@
       "type": "integer"
     },
     "payment_failures_90d": {
-      "maximum": 90,
       "minimum": 0,
       "title": "Payment Failures 90D",
       "type": "integer"

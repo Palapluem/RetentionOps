@@ -2,7 +2,10 @@
 
 Observation: one generated customer at one monthly cutoff. Feature allowlist contains only
 the five numeric behavioral/plan fields in `data.FEATURES`. IDs, cutoff, label and label
-availability never enter the feature matrix. Source values are simulated, not real events.
+availability never enter the feature matrix. `all` uses simulated snapshots; `events`
+derives values from simulated raw events under docs/EVENT_CONTRACT.md. Neither is real
+customer evidence. Late renewal corrections advance label availability and are subject
+to the same cross-cohort label embargo; a label is available no earlier than cutoff +30d.
 
 | Partition | Cutoffs | Latest label maturity | Role |
 |---|---|---|---|

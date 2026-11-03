@@ -44,12 +44,27 @@ def run_pipeline(
         source = Path(staging) / "snapshots.csv"
         generate_snapshots(source, customers, seed)
         records, source_manifest = ingest_snapshots(source, root, as_of)
+    return fit_and_publish(root, records, source_manifest, seed, as_of)
+
+
+def run_event_pipeline(
+    root: Path, customers: int = 650, seed: int = SEED, as_of: date = DEFAULT_AS_OF
+) -> dict:
+    from .events import prepare_event_dataset
+
+    root = root.resolve()
+    records, source = prepare_event_dataset(root, customers, seed, as_of)
+    return fit_and_publish(root, records, source, seed, as_of)
+
+
+def fit_and_publish(root: Path, records: list, source_manifest: dict, seed: int, as_of: date):
     packages = {
         name: importlib.metadata.version(name)
-        for name in ("numpy", "scipy", "scikit-learn", "joblib", "pydantic", "fastapi")
+        for name in ("numpy", "scipy", "scikit-learn", "joblib", "pydantic", "fastapi", "polars")
     }
     identity = {
         "dataset_sha256": source_manifest["dataset_sha256"],
+        "source_manifest_sha256": canonical_hash(source_manifest),
         "implementation_sha256": implementation_hash(),
         "feature_schema_sha256": canonical_hash({"features": FEATURES, "schema": 1}),
         "packages": packages,
@@ -85,7 +100,9 @@ def run_pipeline(
                 "model_sha256": sha256_file(staged / "model.joblib"),
                 "source_type": "SYNTHETIC",
                 "not_real_world_performance": True,
-                "feature_origin": "Simulated snapshots; not event-derived aggregates",
+                "feature_origin": source_manifest.get(
+                    "feature_origin", "Simulated snapshots; not event-derived aggregates"
+                ),
                 "features": list(FEATURES),
                 "label_horizon_days": 30,
                 "trained_at": datetime.now(UTC).isoformat(),

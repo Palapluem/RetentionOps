@@ -5,8 +5,8 @@ Read README, docs/DECISIONS.md and the relevant contract before changing behavio
 
 ## Scope and evidence
 
-- Current implementation is a synthetic-only local foundation. Do not claim KKBox results,
-  event-derived features, cloud deployment, production auth or completed release gates.
+- Current implementation includes a synthetic-only local foundation and tested event-derived
+  features. Do not claim KKBox results, cloud deployment, production auth or completed release gates.
 - Keep `RetentionOps_Execution_Kit_2026-11-04/` and its archive local and untracked. Treat
   starter files as reference material; integrate only reviewed, relevant content.
 - Never commit credentials, .env, private data, generated models, SQLite databases or raw
@@ -23,8 +23,9 @@ Read README, docs/DECISIONS.md and the relevant contract before changing behavio
 - Source event time ≤ source availability ≤ cutoff. Mature labels only; older-cohort labels
   must be available by the next cohort cutoff. Preprocessing fits on train only.
 - Public/local demo accepts generated synthetic identifiers and fixed numeric fields only.
-- The snapshot validator checks supplied provenance dates; raw-event feature derivation is
-  separate work. Do not describe metadata checks as proof of event-level correctness.
+- The legacy snapshot validator checks supplied dates. The `events` path derives features
+  from bitemporal events; test it through independent correction/window fixtures.
+  Read docs/EVENT_CONTRACT.md; never conflate the two paths or their evidence.
 - Model identity includes data, implementation, configuration and dependency versions.
 - Publish scores and active-release pointer in one transaction. Failure preserves the prior
   active release; API queries must filter that release and use read-only connections.

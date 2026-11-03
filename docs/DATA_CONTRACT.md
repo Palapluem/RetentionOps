@@ -19,14 +19,14 @@ extra/missing/duplicate headers fail. Critical values must be present, finite an
 | Field | Meaning / range |
 |---|---|
 | `active_days_30d` | Simulated active days; integer 0–30 |
-| `payment_failures_90d` | Simulated payment failures; integer 0–90 |
+| `payment_failures_90d` | Nonnegative count of failed payment events; multiple per day allowed |
 | `tenure_months` | Integer 1–1200 |
 | `monthly_fee` | Finite simulated fee; greater than 0, at most 10000 |
 | `auto_renew` | Binary plan flag known at cutoff |
 | `feature_max_event_at` | Supplied latest contributing event date |
 | `source_max_available_at` | Supplied latest source availability date |
 | `churn_30d` | Simulated Bernoulli outcome; binary |
-| `label_available_at` | Cutoff + exactly 30 days; inclusive maturity date |
+| `label_available_at` | At least cutoff +30 days; advanced by late outcome revisions |
 | `source_type` | Must be `SYNTHETIC` |
 
 Temporal dates are day-grain ISO dates, not intraday timestamps. Enforce event date ≤
@@ -49,6 +49,14 @@ never silently overwrite it. Invalid input creates no new published source relea
 Prediction key: `(model_version, customer_id, as_of_date)`. One active release serves the API;
 older predictions remain available locally for audit. Reconcile published rows to test rows.
 Generated source/model/SQLite files and the original Execution Kit are ignored by Git.
+
+## Event-derived implementation
+
+`retentionops events` now derives these fields from versioned synthetic raw events, writes
+typed-date Parquet with Polars, and retains source/quality hashes in the model manifest.
+Its independent fixtures exercise feature window boundaries, late revisions, tombstones,
+renewal boundaries, completeness and eligibility. See [EVENT_CONTRACT.md](EVENT_CONTRACT.md).
+The metadata-only limitation above still applies to the legacy `retentionops all` path.
 
 ## Future real-data contract
 
