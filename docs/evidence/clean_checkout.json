@@ -1,0 +1,19 @@
+{
+  "observed_at_bangkok": "2026-11-03T17:22:00.169626+07:00",
+  "source_commit": "90d1f95e26603caec52393ffbe79324662b37f79",
+  "fresh_clone": true,
+  "fresh_venv": true,
+  "kit_present": false,
+  "hashed_install": "passed",
+  "editable_build": "passed",
+  "ruff_check": "passed",
+  "ruff_format": "passed",
+  "pytest": "44 passed, 1 upstream TestClient/httpx deprecation warning",
+  "synthetic_pipeline": "passed",
+  "tracked_file_guard": "passed",
+  "model_identity_matches_original": true,
+  "model_sha256_matches_original": true,
+  "metrics_match_original": true,
+  "model_version": "synthetic-logreg-a5f4db76feefffe0edc23900e7ef16596f8d59b77420a7a4cb5245cbce611a84",
+  "model_sha256": "320564484051a3a43b41470508965191e95bb5b8b705c9ab36110049d3a75e12"
+}

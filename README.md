@@ -4,6 +4,10 @@ Customer churn intelligence with traceable data, temporal model evaluation and b
 read-only risk serving. **Current status: verified-local scope under development; synthetic
 data only. No GCP deployment, KKBox training, production authentication or v0.1.0 release.**
 
+Day 1: [implementation PR](https://github.com/Palapluem/RetentionOps/pull/4) with passing
+[implementation CI](https://github.com/Palapluem/RetentionOps/actions/runs/41618586106),
+local/clean-checkout evidence and human review pending.
+
 The first vertical slice runs without cloud credentials:
 
 ```text
