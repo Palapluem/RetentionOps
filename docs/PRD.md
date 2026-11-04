@@ -19,7 +19,7 @@ and Next.js. Public demonstrations use generated synthetic accounts exclusively.
 |---|---|---|
 | Source intake | Synthetic CSV and JSONL event intake, source identity, immutable hash/quality manifests, idempotent replay | Authorized source-specific GCS/BigQuery ingestion and reconciliation |
 | Features | Event-derived point-in-time features and mature synthetic renewal labels; legacy snapshot smoke path retained | Real-source event mapping, independent label/correction policy and production warehouse transforms |
-| Training | Fixed Logistic Regression, constant prior, 3 temporal splits | Baseline/candidate comparison, tracked promotion |
+| Training | Logistic Regression, bounded LightGBM comparison selected by validation AP, constant prior, 3 temporal cohorts | Comparison and promotion on authorized sources; reproducible cloud training |
 | Model lineage | Data/code/config/dependencies/model hashes | GCS versioned artifacts, reproducible cloud training |
 | Scores | Transactional local SQLite, active-release isolation | Idempotent BigQuery batch scoring |
 | API | Typed local read-only overview/risk and readiness | Access-controlled Cloud Run service and governed views |
@@ -40,5 +40,6 @@ causal campaign effect nor measured retention ROI.
 ## Exclusions
 
 No Kafka, Kubernetes, Spark cluster, online feature store, counterfactual uplift claim,
-multi-tenant billing or high-availability guarantee. MLflow, LightGBM and Polars/PyArrow
-enter when their concrete data/training tasks are implemented; no duplicate tools by default.
+multi-tenant billing or high-availability guarantee. A remote experiment service such as
+MLflow, calibration tuning and real-data promotion require a concrete use case and separate
+review; the local immutable manifest is sufficient for the current synthetic workflow.

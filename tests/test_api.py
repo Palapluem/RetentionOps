@@ -35,6 +35,22 @@ def test_live_endpoints_and_active_model_isolation(publication):
     assert client.post("/api/v1/risk").status_code == 405
 
 
+def test_overview_reports_the_selected_lightgbm_candidate(tmp_path):
+    manifest = run_pipeline(tmp_path, customers=100, seed=2)
+    assert manifest["selection"]["selected_model_family"] == "lightgbm"
+
+    overview = TestClient(create_app(tmp_path)).get("/api/v1/overview").json()
+
+    assert (
+        overview["average_precision"]
+        == manifest["metrics"]["test"]["selected_model"]["average_precision"]
+    )
+    assert (
+        overview["baseline_average_precision"]
+        == manifest["metrics"]["test"]["constant_prior"]["average_precision"]
+    )
+
+
 def test_bounds_and_openapi(tmp_path):
     client = TestClient(create_app(tmp_path))
     for query in ("limit=0", "limit=101", "limit=abc", "offset=-1", "offset=100001"):

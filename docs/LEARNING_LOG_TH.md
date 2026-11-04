@@ -126,3 +126,28 @@ branch protection/Project board เป็นสถานะที่ต้อง
 
 ขั้นถัดไปคือ review หลักฐาน Day 1 แล้วสร้าง event-derived features และ cloud plan ที่มี
 ขอบเขต ค่าใช้จ่ายและ cleanup ชัดเจน ก่อนขออนุมัติสร้างทรัพยากรที่มีค่าใช้จ่าย
+
+## 4 พฤศจิกายน — เปรียบเทียบ LightGBM โดยไม่แตะ test ตอนเลือก
+
+เพิ่ม LightGBM แบบ CPU deterministic และ grid ที่กำหนดไว้สามชุด โดย fit candidate จาก
+train cohorts เท่านั้น แล้วใช้ validation average precision เลือกทั้ง model family และ
+parameters ถ้าคะแนนเสมอกันจะคง Logistic Regression ก่อน จากนั้น freeze ผลเลือกแล้วจึงวัด
+test ของโมเดลที่เลือกกับ Logistic Regression และ constant-prior reference หนึ่งครั้ง
+ไม่มีการเอา validation มารวม train ซ้ำ และไม่ประเมิน LightGBM ที่แพ้บน test
+
+ทดสอบ leakage seam ด้วยการกลับ label ของ test cohort ทั้งชุดโดยยังมีสอง class: selection,
+validation metrics และ probability ที่โมเดลทำนายต้องเหมือนเดิม เพิ่มอีกเส้นทางทดสอบว่า
+joblib artifact ให้คะแนนตรงกับ SQLite และ rerun ใช้ model version/checksum เดิม พร้อมมีหนึ่ง
+แถวต่อ model × customer × cutoff ใน storage เดิม การ publish ยังใช้ transaction เดิม
+และ API overview อ่าน metric ของโมเดลที่ active ส่วน manifest รุ่นเก่าที่ไม่มี key ใหม่ยัง
+อ่าน Logistic Regression ได้
+
+หลักฐานรัน 650 customers วันที่ 4 พ.ย. บน snapshots และ event-derived synthetic data เลือก
+Logistic Regression ทั้งคู่ ค่า validation AP ของ events คือ LR 0.3093 เทียบ LightGBM สามชุด
+0.2984, 0.2948 และ 0.3022 ส่วน event-derived test AP คือ 0.2515 เทียบ constant-prior
+0.1600; Brier 0.1317, ROC-AUC 0.6780 และ Recall@10% 0.1827 ตัวเลขนี้ตรวจเส้นทางและ
+วิธีประเมินบนข้อมูลจำลองเท่านั้น ไม่ใช่ KKBox, ลูกค้าจริง หรือหลักฐาน campaign uplift
+
+เก็บ candidate result, config ที่เลือก, source/feature/code/dependency identity, seed และ
+model checksum ใน immutable local manifest แทนการเพิ่ม MLflow ในงานขนาดนี้ งาน batch บน
+Cloud Run/BigQuery ยังติด issue #2 และไม่ถือว่าผ่านจากการทดสอบ local

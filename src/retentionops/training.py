@@ -1,10 +1,12 @@
-"""Fixed baseline protocol: train-only preprocessing, disjoint temporal cohorts."""
+"""Train-only model fitting and validation-only selection on temporal cohorts."""
 
 from __future__ import annotations
 
 import math
 
 import numpy as np
+from lightgbm import LGBMClassifier
+from sklearn.base import BaseEstimator
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -17,6 +19,30 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from .data import CUTOFFS, FEATURES, Snapshot
+
+LIGHTGBM_GRID = (
+    {
+        "num_leaves": 3,
+        "max_depth": 2,
+        "learning_rate": 0.05,
+        "n_estimators": 80,
+        "min_child_samples": 20,
+    },
+    {
+        "num_leaves": 7,
+        "max_depth": 3,
+        "learning_rate": 0.05,
+        "n_estimators": 100,
+        "min_child_samples": 20,
+    },
+    {
+        "num_leaves": 7,
+        "max_depth": 3,
+        "learning_rate": 0.03,
+        "n_estimators": 160,
+        "min_child_samples": 40,
+    },
+)
 
 
 def temporal_split(records: list[Snapshot]) -> dict[str, list[Snapshot]]:
@@ -80,27 +106,89 @@ def evaluate(labels: np.ndarray, probabilities: np.ndarray) -> dict:
     }
 
 
-def train_baseline(records: list[Snapshot], seed: int) -> tuple[Pipeline, dict, list, np.ndarray]:
+def train_selected(
+    records: list[Snapshot], seed: int
+) -> tuple[BaseEstimator, dict, list[Snapshot], np.ndarray]:
     cohorts = temporal_split(records)
     x_train, y_train = matrix(cohorts["train"])
-    model = Pipeline(
+    logistic = Pipeline(
         [
             ("standardize", StandardScaler()),
             ("classifier", LogisticRegression(C=1.0, max_iter=500, random_state=seed)),
         ]
     )
-    model.fit(x_train, y_train)
+    logistic.fit(x_train, y_train)
     baseline = DummyClassifier(strategy="prior").fit(x_train, y_train)
-    metrics = {}
-    for name in ("validation", "test"):
-        x, y = matrix(cohorts[name])
-        metrics[name] = {
-            "logistic_regression": evaluate(y, model.predict_proba(x)[:, 1]),
-            "constant_prior": evaluate(y, baseline.predict_proba(x)[:, 1]),
+
+    x_validation, y_validation = matrix(cohorts["validation"])
+    validation_metrics = {
+        "logistic_regression": evaluate(y_validation, logistic.predict_proba(x_validation)[:, 1]),
+        "constant_prior": evaluate(y_validation, baseline.predict_proba(x_validation)[:, 1]),
+    }
+    candidate_results = [
+        {
+            "candidate": "logistic_regression",
+            "model_family": "logistic_regression",
+            "parameters": {"C": 1.0, "max_iter": 500, "seed": seed},
+            "average_precision": validation_metrics["logistic_regression"]["average_precision"],
         }
-    test_x, _ = matrix(cohorts["test"])
+    ]
+    fitted_models: dict[str, BaseEstimator] = {"logistic_regression": logistic}
+    for index, grid_parameters in enumerate(LIGHTGBM_GRID, start=1):
+        candidate_name = f"lightgbm_{index:03d}"
+        parameters = {
+            **grid_parameters,
+            "objective": "binary",
+            "random_state": seed,
+            "deterministic": True,
+            "force_col_wise": True,
+            "n_jobs": 1,
+            "verbosity": -1,
+        }
+        model = LGBMClassifier(**parameters)
+        model.fit(x_train, y_train)
+        candidate_metrics = evaluate(y_validation, model.predict_proba(x_validation)[:, 1])
+        validation_metrics[candidate_name] = candidate_metrics
+        candidate_results.append(
+            {
+                "candidate": candidate_name,
+                "model_family": "lightgbm",
+                "parameters": parameters,
+                "average_precision": candidate_metrics["average_precision"],
+            }
+        )
+        fitted_models[candidate_name] = model
+
+    # Select only on validation average precision. A tie retains the simpler LR candidate;
+    # subsequent exact ties retain the earlier, smaller LightGBM grid entry.
+    winner = max(
+        enumerate(candidate_results),
+        key=lambda item: (item[1]["average_precision"], -item[0]),
+    )[1]
+    selected_name = winner["candidate"]
+    model = fitted_models[selected_name]
+    selection = {
+        "metric": "validation_average_precision",
+        "selected_candidate": selected_name,
+        "selected_model_family": winner["model_family"],
+        "selected_parameters": winner["parameters"],
+        "reason": "Highest validation average precision; exact ties prefer Logistic Regression, then grid order",
+        "candidates": candidate_results,
+    }
+
+    test_x, test_y = matrix(cohorts["test"])
+    selected_probabilities = model.predict_proba(test_x)[:, 1]
+    metrics = {
+        "validation": validation_metrics,
+        "test": {
+            "logistic_regression": evaluate(test_y, logistic.predict_proba(test_x)[:, 1]),
+            "constant_prior": evaluate(test_y, baseline.predict_proba(test_x)[:, 1]),
+            "selected_model": evaluate(test_y, selected_probabilities),
+        },
+    }
     protocol = {
         "metrics": metrics,
+        "selection": selection,
         "cohorts": {
             name: {
                 "rows": len(rows),
@@ -112,7 +200,6 @@ def train_baseline(records: list[Snapshot], seed: int) -> tuple[Pipeline, dict, 
         "customer_overlap_train_test": len(
             {r.customer_id for r in cohorts["train"]} & {r.customer_id for r in cohorts["test"]}
         ),
-        "selection": "Fixed Logistic Regression baseline; no hyperparameter tuning or refit",
         "score_cutoff": str(CUTOFFS[3]),
     }
-    return model, protocol, cohorts["test"], model.predict_proba(test_x)[:, 1]
+    return model, protocol, cohorts["test"], selected_probabilities

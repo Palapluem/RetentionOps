@@ -94,7 +94,11 @@ def create_app(root: Path | None = None) -> FastAPI:
             with read_connection(data_root) as conn:
                 m = active_manifest(conn)
             metrics = m["metrics"]["test"]
-            values = metrics["logistic_regression"]
+            values = (
+                metrics["selected_model"]
+                if "selected_model" in metrics
+                else metrics["logistic_regression"]
+            )
             return Overview(
                 model_version=m["model_version"],
                 score_cutoff=m["score_cutoff"],
