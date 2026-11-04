@@ -1,0 +1,25 @@
+{
+  "schema_version": "event-source-bronze-v1",
+  "partition_field": "complete_through",
+  "cluster_fields": ["source_release_id", "event_id"],
+  "fields": [
+    {"name": "source_release_id", "type": "STRING", "mode": "REQUIRED"},
+    {"name": "source_id", "type": "STRING", "mode": "REQUIRED"},
+    {"name": "source_sha256", "type": "STRING", "mode": "REQUIRED"},
+    {"name": "schema_version", "type": "STRING", "mode": "REQUIRED"},
+    {"name": "complete_through", "type": "DATE", "mode": "REQUIRED"},
+    {"name": "event_id", "type": "STRING", "mode": "REQUIRED"},
+    {"name": "revision", "type": "INTEGER", "mode": "REQUIRED"},
+    {"name": "customer_id", "type": "STRING", "mode": "REQUIRED"},
+    {"name": "kind", "type": "STRING", "mode": "REQUIRED"},
+    {"name": "occurred_at", "type": "DATE", "mode": "REQUIRED"},
+    {"name": "available_at", "type": "DATE", "mode": "REQUIRED"},
+    {"name": "deleted", "type": "BOOLEAN", "mode": "REQUIRED"},
+    {"name": "expiry_date", "type": "DATE", "mode": "NULLABLE"},
+    {"name": "started_at", "type": "DATE", "mode": "NULLABLE"},
+    {"name": "monthly_fee", "type": "FLOAT", "mode": "NULLABLE"},
+    {"name": "auto_renew", "type": "INTEGER", "mode": "NULLABLE"},
+    {"name": "source_type", "type": "STRING", "mode": "REQUIRED"},
+    {"name": "event_sha256", "type": "STRING", "mode": "REQUIRED"}
+  ]
+}

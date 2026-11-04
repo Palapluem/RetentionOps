@@ -2,6 +2,8 @@ import json
 import sys
 from datetime import date
 
+import pytest
+
 from retentionops.cli import main
 from retentionops.data import DEFAULT_AS_OF
 
@@ -64,3 +66,13 @@ def test_cli_ingests_then_runs_a_published_event_source(tmp_path, monkeypatch, c
     main()
     result = json.loads(capsys.readouterr().out)
     assert result["source"]["events"]["source_release_id"] == ingested["source_release_id"]
+
+
+def test_publish_gcp_requires_explicit_target_and_byte_bounds(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["retentionops", "publish-gcp", "--source-release", "demo"])
+
+    with pytest.raises(SystemExit) as error:
+        main()
+
+    assert error.value.code == 2
+    assert "--bucket" in capsys.readouterr().err

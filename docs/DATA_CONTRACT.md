@@ -68,8 +68,13 @@ quality counts in the model manifest. Tests cover malformed/duplicate/watermark 
 idempotent intake, replay, feature windows, late revisions, tombstones, renewal boundaries,
 completeness and eligibility. See [EVENT_CONTRACT.md](EVENT_CONTRACT.md). This contract is
 synthetic-only; real source identity mapping, source-specific schemas, licensing, and
-GCS/BigQuery adapters remain open. The metadata-only limitation still applies to legacy
-`retentionops all`.
+GCP execution remain unverified. The optional `publish-gcp` adapter emits a separately typed
+bronze object with source release ID, raw SHA-256, completeness watermark and per-event hashes;
+its schema/partition/clustering contract is in
+[bigquery_bronze_events.json](../contracts/bigquery_bronze_events.json). The adapter requires
+an existing private/versioned bucket and pre-created destination table, bounded query bytes,
+and explicit cloud approval. Fake-client tests establish local protocol behavior only. The
+metadata-only limitation still applies to legacy `retentionops all`.
 
 ## Future real-data contract
 
