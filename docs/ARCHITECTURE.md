@@ -34,9 +34,19 @@ manifest and scores within one read transaction, preventing mixed model releases
 
 Local constraints: the event adapter accepts only the synthetic event schema and IDs; it is
 not a real-data/KKBox source adapter. One pipeline writer per root; CSV intake materializes in
-memory; SQLite serves small demos; no cloud scheduler or GCS/BigQuery integration exists. The
-legacy `all` command still uses simulated snapshot features. Cloud resources remain planned,
-not provisioned.
+memory; SQLite serves small demos; no cloud scheduler or service integration has been verified.
+The legacy `all` command still uses simulated snapshot features. An explicit, optional
+`publish-gcp` adapter uploads validated event releases to existing GCS and BigQuery resources.
+It uses content-addressed object names, generation preconditions, a typed bronze schema,
+idempotent load-job IDs and streamed, field-by-field row/hash/key/lineage reconciliation against
+the validated local release. Offline tests use fakes; the adapter has not been run against
+Google Cloud. Cloud resources remain planned, not provisioned.
+
+```mermaid
+flowchart LR
+  R[(Local immutable event release)] -. explicit command, after approval .-> G[(Existing private/versioned GCS)]
+  G -. typed bronze artifact .-> B[(Existing partitioned BigQuery table)]
+```
 
 ## Target cloud architecture (planned)
 

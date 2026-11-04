@@ -76,6 +76,43 @@ constant-prior baseline ทำนายทุกคนด้วยอัตร�
 คะแนน synthetic ไปอ้างผลลูกค้าจริง ลูกค้าซ้ำข้ามเดือนได้ จึงไม่ใช่การทดสอบลูกค้าใหม่
 เมื่อขยายระบบให้ฝึกเป็น Cloud Run Job และใช้ validation เลือก candidate ก่อนเปิด test
 
+## Day 2: ขอบเขต GCS และ BigQuery แบบไม่สร้างทรัพยากร — 4 พฤศจิกายน 2026
+
+เพิ่ม `cloud.py` และคำสั่ง `retentionops publish-gcp` เพื่อย้าย release ที่ผ่าน local
+contract ไปยัง GCS และ BigQuery ได้อย่างชัดเจน การทำเป็นคำสั่งแยกทำให้ `events`, training
+และ API ยังรันได้โดยไม่ต้องติดตั้ง Google SDK หรือใช้ credentials คำสั่ง cloud ต้องระบุ
+bucket/table/location และขีดจำกัด byte เอง อีกทั้งยืนยันว่า bucket/table มีอยู่แล้ว จึงไม่
+สร้างทรัพยากร, เปลี่ยน IAM หรือเปิด billing อัตโนมัติ
+
+GCS รับ `events.jsonl` ตาม byte เดิม, `manifest.json` และไฟล์ bronze แยกต่างหากที่เติม
+source release ID, raw SHA-256, watermark และ hash ต่อ event การเขียนแต่ละ object ใช้
+`if_generation_match=0`; ถ้ามี object เดิมจะอ่าน metadata และเนื้อหากลับมาตรวจ checksum
+ก่อนใช้ generation เดิมได้ Bucket ต้องเปิด Object Versioning, uniform bucket-level access,
+Public Access Prevention และอยู่ location เดียวกับ BigQuery การดาวน์โหลด object ตอนตรวจ
+replay ช่วยยืนยัน bytes จริง แต่ทำให้มี network read เพิ่ม จึงจำกัดขนาดรวมด้วย
+`--max-upload-bytes`
+
+BigQuery ปลายทางต้องเป็น native table ที่ partition ด้วย `complete_through` และ cluster
+ด้วย `source_release_id,event_id` ตัวโหลดส่ง schema ชัดเจน พร้อม `CREATE_NEVER` และ
+`WRITE_APPEND` จะอ่านผล query ของ release กลับมาเทียบ typed fields, event-revision keys,
+event hashes และ lineage ทีละแถวกับ source ที่ตรวจสอบแล้ว ทั้งก่อนตัดสิน replay และหลังเขียน
+ใช้ job ID ที่ผูก release, destination และ GCS URI เพื่อไม่ให้การ
+ส่ง request ซ้ำ append ซ้ำ ถ้า job ล้มเหลวชัดเจนจะลองได้ไม่เกินสาม job ID ที่คาดเดาได้
+แต่ถ้าสถานะไม่แน่ชัดจะหยุดให้ตรวจสอบก่อน แต่ละ query ถูกจำกัดด้วย
+`--max-query-bytes`
+
+ทดสอบด้วย `pytest tests/test_cloud.py` ซึ่งใช้ fake GCS/BigQuery clients ครอบคลุม upload
+ใหม่และ replay, byte/metadata conflict, bucket security, table contract, create-never,
+row/field reconciliation, job ID conflict และ retry หลังยืนยัน failure Tests พิสูจน์ protocol
+ใน process เท่านั้น ไม่ได้พิสูจน์ credentials, IAM, region จริง, quota, cloud billing หรือ
+การเชื่อมต่อ GCP; ยังไม่มี account จึงยังไม่ได้รันคำสั่ง `publish-gcp`
+
+เมื่อเตรียมใช้จริง ให้ตรวจ budget/rights/region/cleanup ตาม issue #2 ก่อน แล้วติดตั้ง
+`requirements-cloud.lock`, ตั้ง ADC และสร้าง bucket/dataset/table ด้วยขั้นตอนที่เจ้าของ
+อนุมัติ รายละเอียด schema, SQL template, คำสั่ง, recovery และข้อจำกัดอยู่ใน
+`docs/CLOUD_INGESTION.md` หากขนาดข้อมูลโตขึ้น ควรวัดขนาดอัปโหลดและผล query จริงก่อน
+ปรับ cap หรือเพิ่ม staging/job orchestration; ห้ามขยายสิทธิ์หรือสร้างทรัพยากรจากโค้ดนี้เอง
+
 ## การทำซ้ำและ model version — `src/retentionops/pipeline.py`
 
 เวอร์ชันไม่ได้ขึ้นกับข้อมูลอย่างเดียว แต่รวม code, feature schema, config, Python,

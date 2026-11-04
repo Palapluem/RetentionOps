@@ -1,8 +1,9 @@
 # RetentionOps
 
 Customer churn intelligence with traceable data, temporal model evaluation and bounded
-read-only risk serving. **Current status: verified-local scope under development; synthetic
-data only. No GCP deployment, KKBox training, production authentication or v0.1.0 release.**
+read-only risk serving. **Current status: local synthetic scope under development. Optional
+GCS/BigQuery adapter code is fake-client tested but not run on GCP. No KKBox training,
+production authentication or v0.1.0 release.**
 
 Day 1: [implementation PR](https://github.com/Palapluem/RetentionOps/pull/4) with passing
 [implementation CI](https://github.com/Palapluem/RetentionOps/actions/runs/41618586106),
@@ -43,6 +44,12 @@ release. The adapter accepts the synthetic event contract only, not KKBox or rea
 data. See [event and renewal semantics](docs/EVENT_CONTRACT.md). These are simulated
 subscription opportunities, not a real-world accuracy result.
 
+An explicit `retentionops publish-gcp` command can upload a validated synthetic source and
+load a bronze artifact into an **existing** private/versioned GCS bucket and BigQuery table.
+It requires the optional hash-locked SDKs and explicit upload/query byte caps; it never runs
+with local training or API startup and does not provision resources. No GCP account/project
+or real cloud job has been verified. See the [cloud ingestion contract](docs/CLOUD_INGESTION.md).
+
 ## Run locally
 
 Python 3.11 is the supported baseline. From the repository root:
@@ -55,6 +62,10 @@ python -m pip install --no-deps --no-build-isolation -e .
 bash scripts/local_smoke.sh
 python -m uvicorn retentionops.api:app --host 127.0.0.1 --port 8000
 ```
+
+Only for an approved future cloud run, install `requirements-cloud.lock` after the default
+lock. Do not run cloud writes until account/project, source rights, region, budget, IAM and
+cleanup have been reviewed and approved.
 
 Open <http://127.0.0.1:8000/> or <http://127.0.0.1:8000/docs>. The dashboard displays actual
 locally published synthetic predictions. Training is an explicit CLI step, never an API
@@ -79,6 +90,7 @@ python -m ruff check src tests scripts
 python -m ruff format --check src tests scripts
 python -m pytest -q
 python -m pip_audit -r requirements.lock --require-hashes --disable-pip
+python -m pip_audit -r requirements-cloud.lock --require-hashes --disable-pip
 python scripts/check_repository.py
 python scripts/cloud_preflight.py
 ```
@@ -108,6 +120,7 @@ volume lifecycle. A Dockerfile is not deployment evidence.
 - [Testing strategy](docs/TESTING.md), [risk register](docs/RISK_REGISTER.md)
 - [Release gates](docs/RELEASE_AUDIT.md), [backlog](docs/BACKLOG.md)
 - [Local source-intake and replay evidence](docs/evidence/source_intake_2026-11-03.json)
+- [Optional GCS/BigQuery ingestion contract and limits](docs/CLOUD_INGESTION.md)
 
 The original Execution Kit is intentionally excluded from Git and Docker context. This repo
 contains reviewed implementation and project documentation, not the kit directory.

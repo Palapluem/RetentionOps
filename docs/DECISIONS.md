@@ -14,6 +14,7 @@
 | 2026-11-03 | API-backed smoke HTML before Next.js product UI | Verifies the vertical slice early; not a substitute for the planned product frontend |
 | 2026-11-03 | Target GCS/BigQuery/Cloud Run/Scheduler with OIDC | Managed batch architecture; no resource creation before account/region/budget/IAM approval |
 | 2026-11-03 | Keep shared Python under src until service boundaries exist | Avoid empty monorepo scaffolding; move entrypoints into apps/services when independently operated |
+| 2026-11-04 | Add GCS/BigQuery as an explicit optional writer over validated synthetic releases | Enables Day 2 adapter work without cloud credentials; require pre-existing private/versioned resources, bounded bytes and fake-client tests; no GCP result is claimed |
 
 Revisit a decision when measured evidence changes its assumptions. Record that evidence and
 the relevant issue/PR; do not silently expand infrastructure or label semantics.

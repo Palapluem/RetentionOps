@@ -12,11 +12,13 @@ and [Derive synthetic features from subscription events with point-in-time tests
 The local intake follow-up [Add replayable local event-source ingestion](https://github.com/Palapluem/RetentionOps/issues/10)
 now separates source generation, quality-gated intake, and replayable feature/model execution;
 it is under review in [PR #11](https://github.com/Palapluem/RetentionOps/pull/11).
+Day 2 cloud-boundary work is tracked as
+[Add optional GCS and BigQuery adapters for synthetic releases](https://github.com/Palapluem/RetentionOps/issues/12).
 
 | Planned period | Next deliverable | Dependency / acceptance |
 |---|---|---|
 | Nov 4 foundation | Review Day 1 PR, establish governance and source rights gate | Local evidence + CI; confirm branch rules/board support; record approved data rights |
-| Nov 5 data platform | Local event-source intake is implemented; GCS versioned intake and BigQuery bronze remain | Cloud project, source rights, budget and IAM approval; source hashes/counts; idempotent replay |
+| Nov 5 data platform | Local event intake and optional GCS/BigQuery adapter code; fake-client tests only | Real GCP project, source rights, budget/IAM approval; real object/job evidence, reconciliation and cost checks remain |
 | Nov 6 features | Subscription events, normalization, PIT feature snapshots | Actual source contract; independent event/correction cutoff fixtures |
 | Nov 9 ML | LightGBM comparison, experiment tracking and batch scoring | Validation-only selection, artifact provenance, warehouse unique keys |
 | Nov 10 backend | Governed warehouse views, access controls, Cloud Run API | Least-privilege identity, auth denial and query-cost bounds |

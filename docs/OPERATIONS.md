@@ -29,7 +29,28 @@ retentionops run-events --source-release 'PASTE_SOURCE_RELEASE_ID'
 The replay verifies the source and manifest before deriving features or training. Identical
 source bytes with the same source ID and watermark are idempotent. Failed validation leaves
 no new event release and does not alter the serving publication. This path does not connect
-to GCS or BigQuery; cloud ingestion remains a separate gated implementation.
+to GCS or BigQuery. The separate cloud adapter is optional and not verified against a real
+GCP account; see [cloud ingestion](CLOUD_INGESTION.md).
+
+### Optional cloud publication (requires owner-approved resources)
+
+`retentionops publish-gcp` explicitly copies one locally validated synthetic source release to
+an existing private/versioned GCS bucket, then appends its typed bronze rows to an existing
+BigQuery table. Install the SDK lock, configure Application Default Credentials, and review
+the cloud gate before running it. The bucket must have Object Versioning, uniform
+bucket-level access and enforced Public Access Prevention; the native BigQuery table must be
+partitioned by `complete_through`, clustered by `source_release_id, event_id`, and colocated
+with the bucket. The command does not create resources or change IAM.
+
+Example arguments and required byte limits are in `docs/CLOUD_INGESTION.md`. If BigQuery fails
+after GCS succeeds, the immutable GCS release stays in place. Rerun the same source release to
+verify/reuse the objects and continue reconciliation. A conflicting object, partial BigQuery
+release or unknown BigQuery job status stops the command; inspect the source release and cloud
+job before retrying. BigQuery reconciliation applies `maximum_bytes_billed` to each query.
+
+No real-cloud run has occurred. Record object generations, BigQuery job IDs and reconciliation
+counts only after a real approved execution; fake-client tests do not establish IAM, location,
+quota or billing readiness.
 
 To avoid overwriting an earlier experiment, pass `--root` and matching `RETENTIONOPS_ROOT`.
 Do not load joblib files from an untrusted source; they are executable serialization. The

@@ -18,11 +18,15 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: requirements.lock
+          cache-dependency-path: |
+            requirements.lock
+            requirements-cloud.lock
       - run: python -m pip install --require-hashes -r requirements.lock
+      - run: python -m pip install --require-hashes -r requirements-cloud.lock
       - run: python -m pip install --no-deps --no-build-isolation -e .
       - run: bash scripts/local_smoke.sh
       - run: python -m pip_audit -r requirements.lock --require-hashes --disable-pip
+      - run: python -m pip_audit -r requirements-cloud.lock --require-hashes --disable-pip
       - name: Verify API over HTTP
         run: |
           python -m uvicorn retentionops.api:app --host 127.0.0.1 --port 8000 &
