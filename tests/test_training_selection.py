@@ -46,6 +46,14 @@ def test_holdout_labels_do_not_change_validation_selected_model(tmp_path):
     )
     assert first_protocol["metrics"]["validation"] == second_protocol["metrics"]["validation"]
     assert first_protocol["selection"] != changed_validation_protocol["selection"]
+    assert (
+        first_protocol["selection"]["selected_candidate"]
+        != changed_validation_protocol["selection"]["selected_candidate"]
+    )
+    assert (
+        first_protocol["selection"]["selected_parameters"]
+        != changed_validation_protocol["selection"]["selected_parameters"]
+    )
     changed_candidates = changed_validation_protocol["selection"]["candidates"]
     changed_best = max(changed_candidates, key=lambda row: row["average_precision"])
     assert (
