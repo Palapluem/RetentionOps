@@ -360,6 +360,12 @@ def _verify_destination_table(client: Any, destination: str, location: str) -> N
     if clustering_fields[:2] != ["source_release_id", "event_id"]:
         raise ValueError("BigQuery destination must cluster by source_release_id and event_id")
     actual = {field.name: field for field in table.schema}
+    expected_names = {name for name, _, _ in _BRONZE_SCHEMA}
+    unexpected = sorted(set(actual) - expected_names)
+    if unexpected:
+        raise ValueError(
+            f"BigQuery destination has fields outside the bronze contract: {', '.join(unexpected)}"
+        )
     for name, field_type, mode in _BRONZE_SCHEMA:
         field = actual.get(name)
         if field is None:

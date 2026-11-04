@@ -25,8 +25,9 @@ kind. Re-upload uses the Cloud Storage generation precondition `if_generation_ma
 an existing object is accepted only when its metadata and downloaded bytes match. The returned
 generation is included in the CLI report.
 
-The BigQuery destination must already exist as a native table. The adapter checks its schema,
-location, `complete_through` partition, and clustering by `source_release_id, event_id`. Loads
+The BigQuery destination must already exist as a native table. The adapter checks its exact
+bronze schema, location, `complete_through` partition, and clustering by
+`source_release_id, event_id`. Loads
 use an explicit schema, `CREATE_NEVER`, `WRITE_APPEND`, deterministic job IDs, and at most
 three deterministic attempts after a confirmed failed job. An unknown job outcome stops for
 manual reconciliation. Before and after a load, the adapter streams the release rows back and

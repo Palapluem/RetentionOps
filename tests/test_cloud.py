@@ -612,6 +612,33 @@ def test_bigquery_rejects_wildcard_or_mismatched_release_uri(tmp_path):
     assert client.load_calls == []
 
 
+def test_bigquery_rejects_unsupported_source_type_before_query(tmp_path):
+    manifest = create_source_release(tmp_path)
+    events, _ = load_event_source(tmp_path, manifest["source_release_id"])
+    unsupported_manifest = dict(manifest)
+    unsupported_manifest["identity"] = dict(manifest["identity"])
+    unsupported_manifest["identity"]["source_type"] = "CUSTOMER"
+    client = FakeBigQueryClient(manifest["rows"])
+
+    with pytest.raises(ValueError, match="Invalid synthetic event source identity"):
+        load_event_release_to_bigquery(
+            client=client,
+            bigquery=FakeBigQuery,
+            bronze_uri=(
+                "gs://retentionops-demo/retentionops/"
+                f"{manifest['identity']['source_id']}/{manifest['source_release_id']}/"
+                "bronze/events.ndjson"
+            ),
+            destination=DESTINATION,
+            manifest=unsupported_manifest,
+            expected_events=events,
+            location=LOCATION,
+            max_query_bytes=50_000_000,
+        )
+    assert client.query_calls == []
+    assert client.load_calls == []
+
+
 def test_bigquery_recovers_a_duplicate_job_submission(tmp_path):
     manifest = create_source_release(tmp_path)
     client = FakeBigQueryClient(manifest["rows"], conflict=True)
@@ -659,6 +686,19 @@ def test_bigquery_requires_partitioned_and_clustered_target(tmp_path):
     with pytest.raises(ValueError, match="partitioned by complete_through"):
         load_release(client, manifest, root=tmp_path)
     assert client.query_calls == []
+
+
+def test_bigquery_rejects_fields_outside_the_bronze_contract(tmp_path):
+    manifest = create_source_release(tmp_path)
+    client = FakeBigQueryClient(manifest["rows"])
+    client.table.schema.append(
+        SimpleNamespace(name="unreviewed_field", field_type="STRING", mode="NULLABLE")
+    )
+
+    with pytest.raises(ValueError, match="outside the bronze contract"):
+        load_release(client, manifest, root=tmp_path)
+    assert client.query_calls == []
+    assert client.load_calls == []
 
 
 def test_missing_bigquery_destination_fails_before_gcs_upload(tmp_path):
