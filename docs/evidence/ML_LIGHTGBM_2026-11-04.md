@@ -38,7 +38,7 @@ labels and are not evidence of real customer or campaign performance.
 
 ## Artifact and replay
 
-- Model version: `synthetic-logreg-48bfbca21fb3c631b255643d03124e79508d78f3c0717537fdd56072de34aaa3`
+- Model version: `synthetic-logreg-46c9ea977b5aff2c103add3e3be68ffb449067b83e62167c92dbf7c13694d392`
 - Feature dataset SHA-256: `cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be`
 - Serialized model SHA-256: `c339287fc0a017cdc1a579bb971eb2b7185f1e772a6f24047780dab61ee8dca5`
 - Same-root replay returned an identical manifest, model version and model checksum.

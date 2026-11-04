@@ -132,7 +132,8 @@ branch protection/Project board เป็นสถานะที่ต้อง
 เพิ่ม LightGBM แบบ CPU deterministic และ grid ที่กำหนดไว้สามชุด โดย fit candidate จาก
 train cohorts เท่านั้น แล้วใช้ validation average precision เลือกทั้ง model family และ
 parameters ถ้าคะแนนเสมอกันจะคง Logistic Regression ก่อน จากนั้น freeze ผลเลือกแล้วจึงวัด
-test ของโมเดลที่เลือกกับ Logistic Regression และ constant-prior reference หนึ่งครั้ง
+test ของโมเดลที่เลือกและ reference ที่ยังไม่ซ้ำกับตัวเลือก: constant-prior เสมอ และ
+Logistic Regression เมื่อ LightGBM ชนะ
 ไม่มีการเอา validation มารวม train ซ้ำ และไม่ประเมิน LightGBM ที่แพ้บน test
 
 ทดสอบ leakage seam ด้วยการกลับ label ของ test cohort ทั้งชุดโดยยังมีสอง class: selection,

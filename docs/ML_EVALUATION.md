@@ -30,11 +30,12 @@ Do not interpret its top-k ties as evidence of useful ranking.
 
 Validation records average precision for Logistic Regression, each LightGBM candidate and
 the constant-prior reference; full validation diagnostics are also retained. After selection
-is frozen, test reports the selected model plus Logistic Regression and constant-prior
-references. Unselected LightGBM candidates are not evaluated on test. Metrics are average
-precision, ROC-AUC, log loss, Brier, precision/recall at top 10%, positive count/rate and five
-calibration bins. Top-k uses `ceil(0.1 × n)` and stable source-order ties. Empty calibration
-bins are omitted; counts must reconcile to cohort size.
+is frozen, test reports the selected model plus reference models not already represented by
+that selection: constant-prior always, and Logistic Regression when LightGBM wins. Unselected
+LightGBM candidates are not evaluated on test. Metrics are average precision, ROC-AUC, log
+loss, Brier, precision/recall at top 10%, positive count/rate and five calibration bins.
+Top-k uses `ceil(0.1 × n)` and stable source-order ties. Empty calibration bins are omitted;
+counts must reconcile to cohort size.
 Average precision is the non-interpolated precision–recall summary defined by
 [scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.average_precision_score.html),
 not trapezoidal PR area. Temporal ordering follows the principle described in the

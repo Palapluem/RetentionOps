@@ -178,13 +178,16 @@ def train_selected(
 
     test_x, test_y = matrix(cohorts["test"])
     selected_probabilities = model.predict_proba(test_x)[:, 1]
+    test_metrics = {"constant_prior": evaluate(test_y, baseline.predict_proba(test_x)[:, 1])}
+    if selected_name == "logistic_regression":
+        selected_test_metrics = evaluate(test_y, selected_probabilities)
+    else:
+        test_metrics["logistic_regression"] = evaluate(test_y, logistic.predict_proba(test_x)[:, 1])
+        selected_test_metrics = evaluate(test_y, selected_probabilities)
+    test_metrics["selected_model"] = selected_test_metrics
     metrics = {
         "validation": validation_metrics,
-        "test": {
-            "logistic_regression": evaluate(test_y, logistic.predict_proba(test_x)[:, 1]),
-            "constant_prior": evaluate(test_y, baseline.predict_proba(test_x)[:, 1]),
-            "selected_model": evaluate(test_y, selected_probabilities),
-        },
+        "test": test_metrics,
     }
     protocol = {
         "metrics": metrics,
