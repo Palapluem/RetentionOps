@@ -11,7 +11,7 @@
 | User interface | Browser observes API-backed rows; desktop/mobile; error/retry and empty states; accessibility scan |
 | Engineering | Ruff, pinned hashed install, dependency audit, tracked-file hygiene, HTTP smoke, clean checkout |
 | Containers | Compose pipeline → shared volume → API readiness; CI records actual result |
-| Cloud adapter | Fake-client tests: create-only GCS uploads, hashes/generations, replay, target schema, load-job retry/conflict, row and lineage reconciliation, upload/query byte limits |
+| Cloud adapter | Fake-client tests: create-only GCS uploads, hashes/generations, replay, target schema, load-job retry/conflict, exact field/hash/key/lineage reconciliation, upload/query byte limits |
 | Real cloud | Real object generations/job IDs, IAM denial, location compatibility, cost, warehouse reconciliation and recovery; not executed |
 
 Run `bash scripts/local_smoke.sh` in the project venv. It is credential-free and generates

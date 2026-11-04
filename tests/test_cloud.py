@@ -8,11 +8,12 @@ import pytest
 import retentionops.cloud as cloud_module
 from retentionops.cloud import (
     _BRONZE_SCHEMA,
+    _expected_bronze_rows,
     load_event_release_to_bigquery,
     publish_event_release_to_gcp,
     publish_event_release_to_gcs,
 )
-from retentionops.events import Event, ingest_event_source
+from retentionops.events import Event, ingest_event_source, load_event_source
 
 LOCATION = "asia-southeast1"
 DESTINATION = "retention-demo-123456.analytics.bronze_events"
@@ -149,11 +150,11 @@ class FakeBigQuery:
 
 
 class FakeQueryJob:
-    def __init__(self, summary):
-        self.summary = summary
+    def __init__(self, rows):
+        self.rows = rows
 
     def result(self):
-        return [self.summary]
+        return self.rows
 
 
 class FakeLoadJob:
@@ -192,6 +193,8 @@ class FakeBigQueryClient:
         self.load_calls = []
         self.query_calls = []
         self.jobs = {}
+        self.expected_event_rows = []
+        self.row_overrides = {}
         fields = []
         for name, field_type, mode in _BRONZE_SCHEMA:
             field = FakeField(field_type)
@@ -212,7 +215,18 @@ class FakeBigQueryClient:
 
     def query(self, query, *, job_config, location):
         self.query_calls.append((query, job_config, location))
-        return FakeQueryJob(self.summary)
+        row_count = self.summary["row_count"]
+        rows = [dict(row) for row in self.expected_event_rows[:row_count]]
+        if self.summary["unique_keys"] < row_count and len(rows) > 1:
+            rows[-1] = dict(rows[0])
+        if self.summary["unique_hashes"] < row_count and len(rows) > 1:
+            rows[-1]["event_sha256"] = rows[0]["event_sha256"]
+        if self.summary["metadata_mismatches"] and rows:
+            rows[0]["source_id"] = "SYN-conflict"
+        for index, overrides in self.row_overrides.items():
+            if index < len(rows):
+                rows[index].update(overrides)
+        return FakeQueryJob(rows)
 
     def load_table_from_uri(self, uri, destination, *, job_id, location, job_config):
         self.load_calls.append((uri, destination, job_id, location, job_config))
@@ -240,7 +254,10 @@ class FakeBigQueryClient:
         return self.jobs[job_id]
 
 
-def load_release(client, manifest, *, bigquery=FakeBigQuery, bronze_uri=None):
+def load_release(client, manifest, *, root, bigquery=FakeBigQuery, bronze_uri=None):
+    events, loaded_manifest = load_event_source(root, manifest["source_release_id"])
+    assert loaded_manifest == manifest
+    client.expected_event_rows = _expected_bronze_rows(events, manifest)
     return load_event_release_to_bigquery(
         client=client,
         bigquery=bigquery,
@@ -252,6 +269,7 @@ def load_release(client, manifest, *, bigquery=FakeBigQuery, bronze_uri=None):
         ),
         destination=DESTINATION,
         manifest=manifest,
+        expected_events=events,
         location=LOCATION,
         max_query_bytes=50_000_000,
     )
@@ -437,7 +455,7 @@ def test_bigquery_load_is_create_never_bounded_and_reconciled(tmp_path):
     manifest = create_source_release(tmp_path)
     client = FakeBigQueryClient(manifest["rows"])
 
-    report = load_release(client, manifest)
+    report = load_release(client, manifest, root=tmp_path)
 
     assert report["status"] == "LOADED"
     assert report["row_count"] == manifest["rows"]
@@ -455,7 +473,7 @@ def test_current_google_bigquery_sdk_accepts_adapter_config_without_credentials(
     manifest = create_source_release(tmp_path)
     client = FakeBigQueryClient(manifest["rows"])
 
-    report = load_release(client, manifest, bigquery=bigquery)
+    report = load_release(client, manifest, root=tmp_path, bigquery=bigquery)
 
     assert report["status"] == "LOADED"
     config = client.load_calls[0][4]
@@ -469,6 +487,8 @@ def test_explicit_gcp_publish_connects_verified_gcs_to_bigquery(tmp_path):
     manifest = create_source_release(tmp_path)
     bucket = FakeBucket("retentionops-demo")
     bigquery_client = FakeBigQueryClient(manifest["rows"])
+    events, _ = load_event_source(tmp_path, manifest["source_release_id"])
+    bigquery_client.expected_event_rows = _expected_bronze_rows(events, manifest)
 
     report = publish_event_release_to_gcp(
         tmp_path,
@@ -502,7 +522,7 @@ def test_bigquery_replay_skips_a_reconciled_release(tmp_path):
         },
     )
 
-    report = load_release(client, manifest)
+    report = load_release(client, manifest, root=tmp_path)
 
     assert report["status"] == "ALREADY_PRESENT"
     assert report["row_count"] == rows
@@ -523,7 +543,7 @@ def test_bigquery_rejects_partial_or_duplicate_release_before_append(tmp_path):
     )
 
     with pytest.raises(ValueError, match="failed row or lineage reconciliation"):
-        load_release(client, manifest)
+        load_release(client, manifest, root=tmp_path)
     assert client.load_calls == []
 
 
@@ -550,7 +570,26 @@ def test_bigquery_rejects_row_hash_or_lineage_mismatch_before_append(
     client = FakeBigQueryClient(rows, summary=summary)
 
     with pytest.raises(ValueError, match="failed row or lineage reconciliation"):
-        load_release(client, manifest)
+        load_release(client, manifest, root=tmp_path)
+    assert client.load_calls == []
+
+
+def test_bigquery_rejects_changed_row_fields_even_when_hash_is_preserved(tmp_path):
+    manifest = create_source_release(tmp_path)
+    rows = manifest["rows"]
+    client = FakeBigQueryClient(
+        rows,
+        summary={
+            "row_count": rows,
+            "unique_keys": rows,
+            "unique_hashes": rows,
+            "metadata_mismatches": 0,
+        },
+    )
+    client.row_overrides = {0: {"customer_id": "SYN-99999"}}
+
+    with pytest.raises(ValueError, match="failed row or lineage reconciliation"):
+        load_release(client, manifest, root=tmp_path)
     assert client.load_calls == []
 
 
@@ -562,6 +601,7 @@ def test_bigquery_rejects_wildcard_or_mismatched_release_uri(tmp_path):
         load_release(
             client,
             manifest,
+            root=tmp_path,
             bronze_uri=(
                 "gs://retentionops-demo/retentionops/"
                 f"{manifest['identity']['source_id']}/{manifest['source_release_id']}/"
@@ -576,7 +616,7 @@ def test_bigquery_recovers_a_duplicate_job_submission(tmp_path):
     manifest = create_source_release(tmp_path)
     client = FakeBigQueryClient(manifest["rows"], conflict=True)
 
-    report = load_release(client, manifest)
+    report = load_release(client, manifest, root=tmp_path)
 
     assert report["status"] == "LOADED"
     assert len(client.load_calls) == 1
@@ -587,7 +627,7 @@ def test_bigquery_retries_a_confirmed_failed_job_with_predictable_id(tmp_path):
     manifest = create_source_release(tmp_path)
     client = FakeBigQueryClient(manifest["rows"], failures=[True, False])
 
-    report = load_release(client, manifest)
+    report = load_release(client, manifest, root=tmp_path)
 
     assert report["status"] == "LOADED"
     assert len(client.load_calls) == 2
@@ -607,7 +647,7 @@ def test_bigquery_rejects_unknown_load_status_instead_of_restarting(tmp_path):
 
     client.load_table_from_uri = unknown_status
     with pytest.raises(RuntimeError, match="status is unknown"):
-        load_release(client, manifest)
+        load_release(client, manifest, root=tmp_path)
     assert len(client.query_calls) == 1
 
 
@@ -617,7 +657,7 @@ def test_bigquery_requires_partitioned_and_clustered_target(tmp_path):
     client.table.time_partitioning = None
 
     with pytest.raises(ValueError, match="partitioned by complete_through"):
-        load_release(client, manifest)
+        load_release(client, manifest, root=tmp_path)
     assert client.query_calls == []
 
 

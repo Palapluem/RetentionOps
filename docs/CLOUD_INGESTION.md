@@ -29,10 +29,11 @@ The BigQuery destination must already exist as a native table. The adapter check
 location, `complete_through` partition, and clustering by `source_release_id, event_id`. Loads
 use an explicit schema, `CREATE_NEVER`, `WRITE_APPEND`, deterministic job IDs, and at most
 three deterministic attempts after a confirmed failed job. An unknown job outcome stops for
-manual reconciliation. Before and after a load, the adapter checks release row count, unique
-event revision keys, unique event hashes and source lineage. Replays with a fully reconciled
-release are no-ops; partial or inconsistent prior rows fail closed. Reconciliation queries
-require a positive `maximum_bytes_billed` value.
+manual reconciliation. Before and after a load, the adapter streams the release rows back and
+compares every typed event field, event hash, revision key and source-lineage field with the
+validated local release. Replays with a fully reconciled release are no-ops; partial or
+inconsistent prior rows fail closed. Reconciliation queries require a positive
+`maximum_bytes_billed` value.
 
 Google documents that `if_generation_match=0` means an object can be created only when no live
 version exists, and that GCS-to-BigQuery loads should use colocated locations. BigQuery load

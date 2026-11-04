@@ -219,20 +219,27 @@ def _upload_immutable_blob(
     }
 
 
-def _write_bronze_ndjson(path: Path, events: list, manifest: dict) -> None:
+def _bronze_row(event: Any, manifest: dict) -> dict[str, Any]:
     identity = manifest["identity"]
+    payload = event.model_dump(mode="json")
+    return {
+        "source_release_id": manifest["source_release_id"],
+        "source_id": identity["source_id"],
+        "source_sha256": identity["sha256"],
+        "schema_version": identity["schema_version"],
+        "complete_through": identity["complete_through"],
+        **payload,
+        "event_sha256": _canonical_event_hash(payload),
+    }
+
+
+def _expected_bronze_rows(events: list[Any], manifest: dict) -> list[dict[str, Any]]:
+    return [_bronze_row(event, manifest) for event in events]
+
+
+def _write_bronze_ndjson(path: Path, events: list, manifest: dict) -> None:
     with path.open("w", encoding="utf-8", newline="\n") as handle:
-        for event in events:
-            payload = event.model_dump(mode="json")
-            row = {
-                "source_release_id": manifest["source_release_id"],
-                "source_id": identity["source_id"],
-                "source_sha256": identity["sha256"],
-                "schema_version": identity["schema_version"],
-                "complete_through": identity["complete_through"],
-                **payload,
-                "event_sha256": _canonical_event_hash(payload),
-            }
+        for row in _expected_bronze_rows(events, manifest):
             handle.write(json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False))
             handle.write("\n")
 
@@ -364,27 +371,18 @@ def _verify_destination_table(client: Any, destination: str, location: str) -> N
             raise ValueError(f"BigQuery destination field has incompatible type or mode: {name}")
 
 
-def _query_summary(
+def _query_reconciliation(
     client: Any,
     destination: str,
     manifest: dict,
+    expected_events: list[Any],
     location: str,
     max_query_bytes: int,
     bigquery: Any,
 ) -> dict[str, int]:
-    identity = manifest["identity"]
+    columns = ", ".join(name for name, _, _ in _BRONZE_SCHEMA)
     query = f"""
-        SELECT
-          COUNT(*) AS row_count,
-          COUNT(DISTINCT TO_JSON_STRING(STRUCT(event_id, revision))) AS unique_keys,
-          COUNT(DISTINCT event_sha256) AS unique_hashes,
-          COUNTIF(
-            source_id IS DISTINCT FROM @source_id OR
-            source_sha256 IS DISTINCT FROM @source_sha256 OR
-            schema_version IS DISTINCT FROM @schema_version OR
-            complete_through IS DISTINCT FROM @complete_through OR
-            source_type IS DISTINCT FROM 'SYNTHETIC'
-          ) AS metadata_mismatches
+        SELECT {columns}
         FROM `{destination}`
         WHERE source_release_id = @source_release_id
     """
@@ -392,23 +390,53 @@ def _query_summary(
         query_parameters=[
             bigquery.ScalarQueryParameter(
                 "source_release_id", "STRING", manifest["source_release_id"]
-            ),
-            bigquery.ScalarQueryParameter("source_id", "STRING", identity["source_id"]),
-            bigquery.ScalarQueryParameter("source_sha256", "STRING", identity["sha256"]),
-            bigquery.ScalarQueryParameter("schema_version", "STRING", identity["schema_version"]),
-            bigquery.ScalarQueryParameter("complete_through", "DATE", identity["complete_through"]),
+            )
         ],
         maximum_bytes_billed=max_query_bytes,
     )
-    rows = list(client.query(query, job_config=config, location=location).result())
-    if len(rows) != 1:
-        raise ValueError("BigQuery reconciliation returned an invalid summary")
-    row = rows[0]
+    expected_rows = _expected_bronze_rows(expected_events, manifest)
+    expected_by_key = {(row["event_id"], row["revision"]): row for row in expected_rows}
+    if len(expected_by_key) != len(expected_rows):
+        raise ValueError("Validated event source contains duplicate event revision keys")
+
+    row_count = 0
+    keys: set[tuple[str, int]] = set()
+    hashes: set[str] = set()
+    row_mismatches = 0
+    metadata_mismatches = 0
+    metadata_fields = (
+        "source_release_id",
+        "source_id",
+        "source_sha256",
+        "schema_version",
+        "complete_through",
+        "source_type",
+    )
+    date_fields = ("complete_through", "occurred_at", "available_at", "expiry_date", "started_at")
+    results = client.query(query, job_config=config, location=location).result()
+    for result in results:
+        row = dict(result)
+        for field in date_fields:
+            if isinstance(row.get(field), date):
+                row[field] = row[field].isoformat()
+        row_count += 1
+        key = (row.get("event_id"), row.get("revision"))
+        keys.add(key)
+        event_hash = row.get("event_sha256")
+        if isinstance(event_hash, str):
+            hashes.add(event_hash)
+        expected = expected_by_key.get(key)
+        if expected is None or row != expected:
+            row_mismatches += 1
+        if expected is None or any(row.get(field) != expected[field] for field in metadata_fields):
+            metadata_mismatches += 1
+
     return {
-        "row_count": int(row["row_count"] or 0),
-        "unique_keys": int(row["unique_keys"] or 0),
-        "unique_hashes": int(row["unique_hashes"] or 0),
-        "metadata_mismatches": int(row["metadata_mismatches"] or 0),
+        "row_count": row_count,
+        "unique_keys": len(keys),
+        "unique_hashes": len(hashes),
+        "metadata_mismatches": metadata_mismatches,
+        "row_mismatches": row_mismatches,
     }
 
 
@@ -418,6 +446,7 @@ def _reconciliation_passed(summary: dict[str, int], expected_rows: int) -> bool:
         and summary["unique_keys"] == expected_rows
         and summary["unique_hashes"] == expected_rows
         and summary["metadata_mismatches"] == 0
+        and summary["row_mismatches"] == 0
     )
 
 
@@ -428,6 +457,7 @@ def load_event_release_to_bigquery(
     bronze_uri: str,
     destination: str,
     manifest: dict,
+    expected_events: list[Any],
     location: str,
     max_query_bytes: int,
 ) -> dict[str, Any]:
@@ -443,7 +473,11 @@ def load_event_release_to_bigquery(
 
     _verify_destination_table(client, destination, location)
     expected_rows = manifest["rows"]
-    summary = _query_summary(client, destination, manifest, location, max_query_bytes, bigquery)
+    if len(expected_events) != expected_rows:
+        raise ValueError("Validated event rows do not match the source manifest")
+    summary = _query_reconciliation(
+        client, destination, manifest, expected_events, location, max_query_bytes, bigquery
+    )
     if summary["row_count"]:
         if not _reconciliation_passed(summary, expected_rows):
             raise ValueError(
@@ -501,8 +535,14 @@ def load_event_release_to_bigquery(
                 raise RuntimeError(
                     "BigQuery load failed after bounded deterministic attempts"
                 ) from exc
-            failed_summary = _query_summary(
-                client, destination, manifest, location, max_query_bytes, bigquery
+            failed_summary = _query_reconciliation(
+                client,
+                destination,
+                manifest,
+                expected_events,
+                location,
+                max_query_bytes,
+                bigquery,
             )
             if failed_summary["row_count"]:
                 if _reconciliation_passed(failed_summary, expected_rows):
@@ -521,7 +561,9 @@ def load_event_release_to_bigquery(
     output_rows = getattr(job, "output_rows", None)
     if output_rows is None or int(output_rows) != expected_rows:
         raise ValueError("BigQuery load output rows do not match the validated source manifest")
-    summary = _query_summary(client, destination, manifest, location, max_query_bytes, bigquery)
+    summary = _query_reconciliation(
+        client, destination, manifest, expected_events, location, max_query_bytes, bigquery
+    )
     if not _reconciliation_passed(summary, expected_rows):
         raise ValueError("BigQuery load failed row or lineage reconciliation")
     return {
@@ -566,12 +608,16 @@ def publish_event_release_to_gcp(
         max_upload_bytes=max_upload_bytes,
     )
     manifest = gcs_report["source_manifest"]
+    events, reloaded_manifest = load_event_source(root, source_release_id)
+    if reloaded_manifest != manifest:
+        raise ValueError("Local source manifest changed after Cloud Storage publication")
     bq_report = load_event_release_to_bigquery(
         client=bigquery_client,
         bigquery=bigquery,
         bronze_uri=gcs_report["bronze"]["uri"],
         destination=destination,
         manifest=manifest,
+        expected_events=events,
         location=location,
         max_query_bytes=max_query_bytes,
     )

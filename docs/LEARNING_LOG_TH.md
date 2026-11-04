@@ -94,15 +94,16 @@ replay ช่วยยืนยัน bytes จริง แต่ทำให�
 
 BigQuery ปลายทางต้องเป็น native table ที่ partition ด้วย `complete_through` และ cluster
 ด้วย `source_release_id,event_id` ตัวโหลดส่ง schema ชัดเจน พร้อม `CREATE_NEVER` และ
-`WRITE_APPEND` ก่อนเขียนจะสรุปจำนวนแถว, event-revision keys, event hashes และ lineage
-หลังเขียนตรวจซ้ำอีกครั้ง ใช้ job ID ที่ผูก release, destination และ GCS URI เพื่อไม่ให้การ
+`WRITE_APPEND` จะอ่านผล query ของ release กลับมาเทียบ typed fields, event-revision keys,
+event hashes และ lineage ทีละแถวกับ source ที่ตรวจสอบแล้ว ทั้งก่อนตัดสิน replay และหลังเขียน
+ใช้ job ID ที่ผูก release, destination และ GCS URI เพื่อไม่ให้การ
 ส่ง request ซ้ำ append ซ้ำ ถ้า job ล้มเหลวชัดเจนจะลองได้ไม่เกินสาม job ID ที่คาดเดาได้
 แต่ถ้าสถานะไม่แน่ชัดจะหยุดให้ตรวจสอบก่อน แต่ละ query ถูกจำกัดด้วย
 `--max-query-bytes`
 
 ทดสอบด้วย `pytest tests/test_cloud.py` ซึ่งใช้ fake GCS/BigQuery clients ครอบคลุม upload
 ใหม่และ replay, byte/metadata conflict, bucket security, table contract, create-never,
-row reconciliation, job ID conflict และ retry หลังยืนยัน failure Tests พิสูจน์ protocol
+row/field reconciliation, job ID conflict และ retry หลังยืนยัน failure Tests พิสูจน์ protocol
 ใน process เท่านั้น ไม่ได้พิสูจน์ credentials, IAM, region จริง, quota, cloud billing หรือ
 การเชื่อมต่อ GCP; ยังไม่มี account จึงยังไม่ได้รันคำสั่ง `publish-gcp`
 

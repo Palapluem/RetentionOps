@@ -38,8 +38,9 @@ memory; SQLite serves small demos; no cloud scheduler or service integration has
 The legacy `all` command still uses simulated snapshot features. An explicit, optional
 `publish-gcp` adapter uploads validated event releases to existing GCS and BigQuery resources.
 It uses content-addressed object names, generation preconditions, a typed bronze schema,
-idempotent load-job IDs and row/lineage reconciliation. Offline tests use fakes; the adapter
-has not been run against Google Cloud. Cloud resources remain planned, not provisioned.
+idempotent load-job IDs and streamed, field-by-field row/hash/key/lineage reconciliation against
+the validated local release. Offline tests use fakes; the adapter has not been run against
+Google Cloud. Cloud resources remain planned, not provisioned.
 
 ```mermaid
 flowchart LR
