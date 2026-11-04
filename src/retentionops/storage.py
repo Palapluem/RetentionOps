@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS active_release (
 
 
 def publish(root: Path, manifest: dict, scores: list[tuple]) -> None:
-    """Make manifest + scores + pointer visible together, or roll everything back."""
+    """Atomically publish a release; allow exact replays and reject conflicting score keys."""
     if len(scores) != manifest["cohorts"]["test"]["rows"]:
         raise ValueError("Score/source reconciliation failed")
     if any(s[0] != manifest["model_version"] or s[2] != manifest["score_cutoff"] for s in scores):
@@ -45,9 +45,26 @@ def publish(root: Path, manifest: dict, scores: list[tuple]) -> None:
         ).fetchone()
         if prior is not None and prior[0] != encoded:
             raise ValueError("Refusing to mutate an immutable model release")
+
+        if prior is not None:
+            stored_scores = [
+                tuple(row)
+                for row in conn.execute(
+                    "SELECT customer_id, as_of_date, churn_probability FROM predictions "
+                    "WHERE model_version=? ORDER BY customer_id, as_of_date",
+                    (version,),
+                )
+            ]
+            incoming_scores = sorted(
+                [(score[1], score[2], float(score[3])) for score in scores],
+                key=lambda score: (score[0], score[1]),
+            )
+            if not stored_scores or stored_scores != incoming_scores:
+                raise ValueError("Refusing to mutate scores for an immutable model release")
+
         conn.execute("INSERT OR IGNORE INTO releases VALUES (?, ?)", (version, encoded))
-        conn.execute("DELETE FROM predictions WHERE model_version = ?", (version,))
-        conn.executemany("INSERT INTO predictions VALUES (?, ?, ?, ?)", scores)
+        if prior is None:
+            conn.executemany("INSERT INTO predictions VALUES (?, ?, ?, ?)", scores)
         conn.execute(
             "INSERT INTO active_release VALUES (1, ?) "
             "ON CONFLICT(slot) DO UPDATE SET model_version=excluded.model_version",

@@ -152,3 +152,19 @@ Logistic Regression ทั้งคู่ ค่า validation AP ของ even
 เก็บ candidate result, config ที่เลือก, source/feature/code/dependency identity, seed และ
 model checksum ใน immutable local manifest แทนการเพิ่ม MLflow ในงานขนาดนี้ งาน batch บน
 Cloud Run/BigQuery ยังติด issue #2 และไม่ถือว่าผ่านจากการทดสอบ local
+
+### ตรวจ test seams ของ LightGBM และการ publish
+
+ยืนยันขอบเขตผ่าน public API สองจุด: `train_selected` และ `run_pipeline`/`publish` โดยไม่
+mock estimator ภายใน การกลับ label ของ test cohort ต้องคง candidate, parameters และ
+probability ที่เลือกไว้ ส่วนการกลับ label ของ validation cohort เปลี่ยน candidate และ
+parameters ได้ตาม AP สูงสุดของ validation พร้อมยืนยันว่า test metrics ยังสะท้อน label ที่
+ใช้ประเมิน
+
+ที่ปลายทาง `run_pipeline` ต้อง batch-score จาก model artifact ที่เลือกจริง และ replay ต้อง
+คงแถวเดิมทุกคอลัมน์ภายใต้ key model × customer × cutoff โดยไม่เพิ่ม key ซ้ำ เพิ่ม guard
+ที่ `publish` ให้ปฏิเสธ payload คะแนนที่ขัดกับ immutable model release; transaction ต้อง
+rollback และรักษาทั้งคะแนนเดิมกับ active release ก่อนหน้า
+
+หลักฐานรอบนี้อยู่ใน `docs/evidence/ML_TEST_SEAMS_2026-11-04.md` ผลทั้งหมดเป็น synthetic
+และ local; ไม่ใช่ผล KKBox, cloud integration หรือ production release evidence
