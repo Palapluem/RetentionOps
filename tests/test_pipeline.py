@@ -103,6 +103,42 @@ def test_failed_transaction_rolls_back(publication):
         assert conn.execute("SELECT COUNT(*) FROM predictions").fetchone()[0] == 150
 
 
+def test_published_scores_are_immutable_for_model_cutoff_customer_keys(tmp_path):
+    first = run_pipeline(tmp_path, customers=150)
+    first_version = first["model_version"]
+    with read_connection(tmp_path) as conn:
+        original_scores = [
+            tuple(row)
+            for row in conn.execute(
+                "SELECT model_version, customer_id, as_of_date, churn_probability "
+                "FROM predictions WHERE model_version=? ORDER BY as_of_date, customer_id",
+                (first_version,),
+            )
+        ]
+
+    second = run_pipeline(tmp_path, customers=200)
+    changed_scores = list(original_scores)
+    version, customer_id, cutoff, probability = changed_scores[0]
+    changed_scores[0] = (version, customer_id, cutoff, probability + 0.01)
+
+    with pytest.raises(ValueError, match="immutable model release"):
+        publish(tmp_path, first, changed_scores)
+
+    with read_connection(tmp_path) as conn:
+        assert active_manifest(conn) == second
+        current_scores = [
+            tuple(row)
+            for row in conn.execute(
+                "SELECT model_version, customer_id, as_of_date, churn_probability "
+                "FROM predictions WHERE model_version=? ORDER BY as_of_date, customer_id",
+                (first_version,),
+            )
+        ]
+        assert conn.execute("SELECT COUNT(*) FROM releases").fetchone()[0] == 2
+
+    assert current_scores == original_scores
+
+
 def test_model_corruption_preserves_active_release(publication):
     root, first = publication
     model = root / "artifacts/models" / first["model_version"] / "model.joblib"

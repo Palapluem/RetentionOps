@@ -18,7 +18,7 @@ it is under review in [PR #11](https://github.com/Palapluem/RetentionOps/pull/11
 | Nov 4 foundation | Review Day 1 PR, establish governance and source rights gate | Local evidence + CI; confirm branch rules/board support; record approved data rights |
 | Nov 5 data platform | Local event-source intake is implemented; GCS versioned intake and BigQuery bronze remain | Cloud project, source rights, budget and IAM approval; source hashes/counts; idempotent replay |
 | Nov 6 features | Subscription events, normalization, PIT feature snapshots | Actual source contract; independent event/correction cutoff fixtures |
-| Nov 9 ML | LightGBM comparison, experiment tracking and batch scoring | Validation-only selection, artifact provenance, warehouse unique keys |
+| Nov 9 ML | [ROP-011](https://github.com/Palapluem/RetentionOps/issues/14): bounded LightGBM comparison, immutable local experiment manifest and selected-model batch scoring | Validation-only selection, artifact provenance, SQLite model/cutoff/customer unique keys; Cloud Run and BigQuery batch scoring remain gated by ROP-002 |
 | Nov 10 backend | Governed warehouse views, access controls, Cloud Run API | Least-privilege identity, auth denial and query-cost bounds |
 | Nov 11 frontend | Next.js risk/cohort/freshness/model views | Typed API, desktop/mobile/error/loading/empty E2E |
 | Nov 12 reliability | OIDC deployment, schedule/monitoring, recovery/cost drills | Actual run/revision IDs and failure/recovery evidence |

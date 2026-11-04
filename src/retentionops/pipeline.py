@@ -23,7 +23,7 @@ from .data import (
     sha256_file,
 )
 from .storage import publish
-from .training import train_baseline
+from .training import train_selected
 
 
 def implementation_hash() -> str:
@@ -69,9 +69,32 @@ def run_event_source_pipeline(
 
 
 def fit_and_publish(root: Path, records: list, source_manifest: dict, seed: int, as_of: date):
+    model, protocol, test, probabilities = train_selected(records, seed)
+    selection = protocol["selection"]
     packages = {
         name: importlib.metadata.version(name)
-        for name in ("numpy", "scipy", "scikit-learn", "joblib", "pydantic", "fastapi", "polars")
+        for name in (
+            "numpy",
+            "scipy",
+            "scikit-learn",
+            "lightgbm",
+            "joblib",
+            "pydantic",
+            "fastapi",
+            "polars",
+        )
+    }
+    config = {
+        "seed": seed,
+        "protocol": "temporal-v2-validation-selection",
+        "selection_metric": selection["metric"],
+        "selected_candidate": selection["selected_candidate"],
+        "selected_model_family": selection["selected_model_family"],
+        "selected_parameters": selection["selected_parameters"],
+        "candidates": [
+            {"candidate": row["candidate"], "parameters": row["parameters"]}
+            for row in selection["candidates"]
+        ],
     }
     identity = {
         "dataset_sha256": source_manifest["dataset_sha256"],
@@ -82,10 +105,13 @@ def fit_and_publish(root: Path, records: list, source_manifest: dict, seed: int,
         "python": platform.python_version(),
         "runtime": {"system": platform.system(), "machine": platform.machine()},
         "evaluation_freeze": str(as_of),
-        "config": {"seed": seed, "C": 1.0, "max_iter": 500, "protocol": "temporal-v1"},
+        "config": config,
     }
-    version = "synthetic-logreg-" + canonical_hash(identity)
-    model, protocol, test, probabilities = train_baseline(records, seed)
+    model_prefix = {
+        "logistic_regression": "synthetic-logreg",
+        "lightgbm": "synthetic-lightgbm",
+    }[selection["selected_model_family"]]
+    version = model_prefix + "-" + canonical_hash(identity)
     model_root = root / "artifacts" / "models"
     model_root.mkdir(parents=True, exist_ok=True)
     release = model_root / version

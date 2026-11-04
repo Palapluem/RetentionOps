@@ -8,8 +8,8 @@ flowchart LR
   I --> R[(Immutable event release + quality manifest)]
   R --> F[Point-in-time features + mature renewal labels]
   F --> Q[(Immutable CSV / typed Parquet feature release)]
-  Q --> T[Train-only scaling + Logistic Regression]
-  T --> E[Validation/test and constant-prior comparison]
+  Q --> T[Train-only Logistic Regression + bounded LightGBM candidates]
+  T --> E[Validation-only selection, then frozen test evaluation]
   T --> M[(Immutable model + source lineage)]
   E --> P[Atomic publication]
   M --> P
@@ -20,10 +20,10 @@ flowchart LR
 
 `events.py` owns event schema, local intake, immutable raw source releases, quality reports and
 point-in-time feature derivation. `data.py` owns the earlier snapshot schema/intake;
-`training.py` owns the fixed evaluation protocol; `pipeline.py` coordinates artifacts and
-lineage; `storage.py` owns publication transactions; `api.py` serves bounded results; `cli.py`
-exposes generation, ingestion, replay, and the one-command demo. Shared code is in
-`src/retentionops/`.
+`training.py` owns train-only model fitting and validation-only candidate selection;
+`pipeline.py` coordinates model selection, artifacts and lineage; `storage.py` owns
+publication transactions; `api.py` serves bounded results; `cli.py` exposes generation,
+ingestion, replay, and the one-command demo. Shared code is in `src/retentionops/`.
 
 Synthetic event intake copies the input into staging, validates all rows and revisions against
 the declared completeness watermark, writes deterministic provenance, then renames the
@@ -35,8 +35,10 @@ manifest and scores within one read transaction, preventing mixed model releases
 Local constraints: the event adapter accepts only the synthetic event schema and IDs; it is
 not a real-data/KKBox source adapter. One pipeline writer per root; CSV intake materializes in
 memory; SQLite serves small demos; no cloud scheduler or GCS/BigQuery integration exists. The
-legacy `all` command still uses simulated snapshot features. Cloud resources remain planned,
-not provisioned.
+legacy `all` command still uses simulated snapshot features. Model family and LightGBM grid
+selection use validation average precision; test is evaluated after freeze. The local
+manifest carries candidate results, selected parameters and dependency/source/model hashes.
+Cloud resources remain planned, not provisioned.
 
 ## Target cloud architecture (planned)
 

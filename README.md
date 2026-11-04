@@ -12,7 +12,8 @@ The first vertical slice runs without cloud credentials:
 
 ```text
 Synthetic CSV → strict data contract → immutable source release
-  → temporal train / validation / test → Logistic Regression + constant baseline
+  → train-only Logistic Regression / LightGBM candidates → validation-only selection
+  → frozen test evaluation + constant-prior comparison
   → immutable model + manifest → transactional SQLite scores → FastAPI → smoke dashboard
 ```
 
@@ -103,6 +104,7 @@ volume lifecycle. A Dockerfile is not deployment evidence.
 - [Implemented and target architecture](docs/ARCHITECTURE.md)
 - [Data, label and license contracts](docs/DATA_CONTRACT.md)
 - [ML evaluation protocol](docs/ML_EVALUATION.md)
+- [Synthetic model card](docs/MODEL_CARD.md), [ROP-011 run evidence](docs/evidence/ML_LIGHTGBM_2026-11-04.md) and [training/publication seam evidence](docs/evidence/ML_TEST_SEAMS_2026-11-04.md)
 - [Decisions and alternatives](docs/DECISIONS.md)
 - [Thai learning log](docs/LEARNING_LOG_TH.md)
 - [Testing strategy](docs/TESTING.md), [risk register](docs/RISK_REGISTER.md)
