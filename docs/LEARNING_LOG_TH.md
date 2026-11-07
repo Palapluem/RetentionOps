@@ -168,3 +168,21 @@ rollback และรักษาทั้งคะแนนเดิมกั�
 
 หลักฐานรอบนี้อยู่ใน `docs/evidence/ML_TEST_SEAMS_2026-11-04.md` ผลทั้งหมดเป็น synthetic
 และ local; ไม่ใช่ผล KKBox, cloud integration หรือ production release evidence
+
+## 7 พฤศจิกายน — ทบทวน Day 1–4 ก่อนเริ่ม API slice
+
+ตรวจแผนกับ PR และรันซ้ำใน temporary roots: Day 1–4 ผ่านในขอบเขต synthetic/local ได้แก่
+81 tests, Ruff check/format, snapshot/event pipeline, การรับ event แยกขั้นและ replay ซ้ำ
+โดยได้ source release/model version เดิมและคะแนน 650 แถวที่ customer key ไม่ซ้ำ API
+health/ready/overview/risk ผ่านใน TestClient ส่วน `/api/v1/model-status` ยังไม่มีใน branch
+ที่ checkout อยู่และเป็นจุดเชื่อมของ API/dashboard slice ถัดไป
+
+ยืนยันซ้ำว่า label ทั้งสองเส้นทางยังเป็นข้อมูลจำลอง: snapshot ใช้ seeded draw ส่วน event
+นับการไม่ต่ออายุในช่วง 30 วันหลัง scheduled expiry ไม่มีแหล่ง ground-truth ที่ได้รับอนุญาต
+สิทธิ์ KKBox หรือบัญชี GCP ที่ยืนยันแล้ว จึงห้ามอ้างผลลูกค้าจริงหรือการ deploy
+
+หน้า Next.js สี่มุมมองอยู่ใน PR #9 และ CI browser ผ่าน แต่ PR ยังไม่ merge และหน้า
+Data & model แสดง lineage/run history ไม่ใช่ telemetry ของ infrastructure การรวมกับ
+LightGBM branch ยังมี conflict ใน API/pipeline/storage/docs; รายละเอียดและข้อจำกัดรอบนี้
+บันทึกไว้ที่ `docs/evidence/DAYS1_4_REAUDIT_2026-11-07.md` การตรวจ pip-audit บนเครื่อง
+ติด DNS ไป PyPI แต่ CI ล่าสุดผ่านขั้นตอน audit แล้ว
