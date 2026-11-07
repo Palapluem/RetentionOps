@@ -74,4 +74,6 @@ rows as its denominator; predicted risk belongs only to the scored test cohort.
 The Next.js product has Overview, Risk explorer, Cohorts, and Data & model views. Errors,
 loading, empty results and stale historical cutoffs are explicit. UI feature values describe
 observations; do not invent causal explanations, saved customers or proven campaign ROI.
-The local app binds to loopback; cloud authentication/deployment is a separate gated task.
+Job attempts remain readable even before the first publication, so an initial failed run can
+be diagnosed. The local app binds to loopback; cloud authentication/deployment is a separate
+gated task.

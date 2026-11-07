@@ -21,9 +21,10 @@ and Next.js. Public demonstrations use generated synthetic accounts exclusively.
 | Features | Event-derived point-in-time features and mature synthetic renewal labels; legacy snapshot smoke path retained | Real-source event mapping, independent label/correction policy and production warehouse transforms |
 | Training | Logistic Regression, bounded LightGBM comparison selected by validation AP, constant prior, 3 temporal cohorts | Comparison and promotion on authorized sources; reproducible cloud training |
 | Model lineage | Data/code/config/dependencies/model hashes | GCS versioned artifacts, reproducible cloud training |
-| Scores | Transactional local SQLite, active-release isolation | Idempotent BigQuery batch scoring |
-| API | Typed local read-only overview/risk and readiness | Access-controlled Cloud Run service and governed views |
-| UI | API-backed smoke dashboard | Next.js cohort/risk/freshness views and E2E |
+| Scores | Atomic local features/scores/run success, immutable replay/conflict checks and active-release isolation | Idempotent BigQuery batch scoring |
+| API | Typed overview/risk/cohorts/model status/details/jobs, consistent workspace and independent System status | Access-controlled Cloud Run service and governed views |
+| UI | System entry dashboard plus retention Overview, Risk, Cohorts and Data & model; URL-backed risk state | Private cloud delivery, production identity and real warehouse integration |
+| Operations | Actual attempts for every model entrypoint, ready/empty/unavailable publication state and model-byte checksum verification | Live cloud monitoring, schedule, recovery and cost evidence |
 | Delivery | Feature branch, issue, PR and credential-free CI | Reviewed changes, OIDC delivery, operations/recovery evidence |
 
 ## P0 release outcomes
@@ -36,6 +37,10 @@ tests, logs and recovery evidence exist; clean checkout reproduces the demo.
 Measure average precision, recall at top 10%, calibration/Brier, log loss and ROC-AUC.
 Observed churn rates need an eligible, mature denominator. Predicted risk is neither a
 causal campaign effect nor measured retention ROI.
+
+The System dashboard reports the local operating boundary explicitly: generated source and
+simulated labels, SQLite serving, cloud not connected and authentication not configured.
+Real source rights, eligibility and ground-truth semantics remain release requirements.
 
 ## Exclusions
 

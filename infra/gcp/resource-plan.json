@@ -1,0 +1,24 @@
+{
+  "status": "PLAN_ONLY_NOT_PROVISIONED",
+  "owner_account_created": false,
+  "project_id": null,
+  "proposed_region": "asia-southeast1",
+  "region_verified": false,
+  "monthly_budget_amount": null,
+  "budget_currency": null,
+  "owner_spending_allowance": null,
+  "alerts_are_hard_cap": false,
+  "provisioning_approved": false,
+  "source_mode": "SYNTHETIC_ONLY",
+  "resources": {
+    "artifact_registry_repositories": ["retentionops"],
+    "gcs_buckets": [{"purpose": "versioned-raw-features-models", "public_access": "prevented", "uniform_access": true, "versioning": true}],
+    "bigquery_datasets": ["retentionops_bronze", "retentionops_silver", "retentionops_gold", "retentionops_analytics", "retentionops_features"],
+    "cloud_run_jobs": [{"name": "ingest", "tasks": 1, "max_retries": 1}, {"name": "train", "tasks": 1, "max_retries": 1}, {"name": "score", "tasks": 1, "max_retries": 1}],
+    "cloud_run_services": [{"name": "api", "public": false, "min_instances": 0, "max_instances": 2}, {"name": "web", "public": false, "min_instances": 0, "max_instances": 1}],
+    "scheduler": {"enabled": false, "timezone": "Asia/Bangkok", "enable_only_after_manual_run_evidence": true}
+  },
+  "oidc_trust": {"repository_id": "1444090876", "repository_owner_id": "80890257", "allowed_ref": "refs/heads/main", "long_lived_service_account_keys": false},
+  "deployment_blockers": ["Owner account/project/budget setup", "Resource and IAM approval", "Real GCS/BigQuery ingestion and serving adapters", "Cloud Run private service-to-service authentication", "Actual cloud integration and recovery evidence"],
+  "cleanup_order": ["Disable schedules", "Remove approved Cloud Run services/jobs", "Review and remove approved images", "Review retained BigQuery/GCS/log data", "Verify residual billing"]
+}

@@ -1,29 +1,48 @@
 # RetentionOps
 
-Customer churn intelligence with traceable data, temporal model evaluation and bounded
-read-only risk serving. **Current status: verified-local scope under development; synthetic
-data only. No GCP deployment, KKBox training, production authentication or v0.1.0 release.**
-
-Day 1: [implementation PR](https://github.com/Palapluem/RetentionOps/pull/4) with passing
-[implementation CI](https://github.com/Palapluem/RetentionOps/actions/runs/41618586106),
-local/clean-checkout evidence and human review pending.
-
-The first vertical slice runs without cloud credentials:
+Customer churn intelligence with traceable events, point-in-time features, temporal model
+selection and a Next.js analyst workspace. **Local synthetic implementation under development.
+GCP deployment, KKBox access, production authentication and v0.1.0 release gates remain open.**
 
 ```text
-Synthetic CSV → strict data contract → immutable source release
-  → train-only Logistic Regression / LightGBM candidates → validation-only selection
-  → frozen test evaluation + constant-prior comparison
-  → immutable model + manifest → transactional SQLite scores → FastAPI → smoke dashboard
+Synthetic JSONL → staged validation → immutable source release
+  → known-at-cutoff revisions → point-in-time CSV / typed Parquet features
+  → train-only Logistic Regression / bounded LightGBM candidates
+  → validation-only selection → frozen test evaluation + constant-prior reference
+  → immutable selected model → atomic features / scores / successful run publication
+  → typed FastAPI workspace → same-origin Next.js proxy → analyst workspace
 ```
 
-The event-backed path is now implemented and tested locally:
+The product opens on the System dashboard, with publication readiness, model-artifact
+checksum state, source/label provenance and actual pipeline attempts. It shows local SQLite
+serving, cloud as not connected and authentication as not configured. Retention views expose
+the selected model's metrics, family/configuration, historical scores and mature cohort
+denominators. Risk filters and pagination survive refresh and shared links through the URL.
 
-```text
-Synthetic subscription/activity/payment/renewal events → latest known revisions
-  → point-in-time features + mature renewal labels → immutable CSV/typed Parquet
-  → the same evaluated model and atomic serving publication
+| Web route | View |
+|---|---|
+| `/` or `/system` | System dashboard |
+| `/overview` | Retention Overview |
+| `/risk` | Risk explorer and model-pinned customer details |
+| `/cohorts` | Cohort analytics |
+| `/status` | Data & model lineage and selection details |
+
+All sources and outcomes remain generated synthetic data. Approved real-source access and
+a business ground-truth definition are still open gates.
+
+## Run with Docker
+
+```bash
+docker compose -p retentionops-day1 run --rm --build pipeline
+docker compose -p retentionops-day1 up --build --wait api web
 ```
+
+Open the product at <http://127.0.0.1:3000/> and API reference at
+<http://127.0.0.1:8000/docs>. API and web ports bind to loopback; the API volume is read-only.
+The named project keeps its generated demo state in a local volume.
+`docker compose -p retentionops-day1 down` stops the containers and preserves demo data.
+
+## Receive and replay a source in separate stages
 
 Run `retentionops events --customers 650` for the one-command synthetic demo; `retentionops all`
 preserves the earlier snapshot smoke path. To exercise the first pipeline as separate,
@@ -44,72 +63,79 @@ release. The adapter accepts the synthetic event contract only, not KKBox or rea
 data. See [event and renewal semantics](docs/EVENT_CONTRACT.md). These are simulated
 subscription opportunities, not a real-world accuracy result.
 
-## Run locally
+## Run manually
 
-Python 3.11 is the supported baseline. From the repository root:
+Python 3.11 and Node.js 24+ are the supported baselines (macOS Node 26 and container/CI
+Node 24 are checked). Choose an available port if the Compose environment is running.
 
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --require-hashes -r requirements.lock
 python -m pip install --no-deps --no-build-isolation -e .
-bash scripts/local_smoke.sh
+retentionops events --customers 650
 python -m uvicorn retentionops.api:app --host 127.0.0.1 --port 8000
 ```
 
-Open <http://127.0.0.1:8000/> or <http://127.0.0.1:8000/docs>. The dashboard displays actual
-locally published synthetic predictions. Training is an explicit CLI step, never an API
-startup side effect. Docker is optional; it is not needed for the Python workflow.
+In a second terminal, activate the same venv and start the web app:
 
 ```bash
-retentionops all --customers 650
-retentionops all --root /tmp/retentionops-demo --customers 200 --as-of 2026-11-03
-RETENTIONOPS_ROOT=/tmp/retentionops-demo python -m uvicorn retentionops.api:app --host 127.0.0.1
-curl --fail http://127.0.0.1:8000/ready
-curl --fail 'http://127.0.0.1:8000/api/v1/risk?limit=5&offset=0'
+source .venv/bin/activate
+cd apps/web
+npm ci
+npm run build
+npm run start
 ```
 
-The default freeze date is fixed at 2026-11-03 for reproducibility. Generated files stay in
-ignored `data/` and `artifacts/`. Run one writer at a time for a given root. The demo binds
-to loopback and has no authentication; cloud exposure is a separate gated task.
+Open <http://127.0.0.1:3000/> for the Next.js workspace. The API root at port 8000 retains
+the earlier smoke HTML. The server-only `RETENTIONOPS_API_URL` defaults to
+`http://127.0.0.1:8000`; no backend credentials are sent to the browser.
+`RETENTIONOPS_ROOT` selects the API's data root. Training is an explicit CLI step and never
+runs when an API or UI request starts.
+`retentionops all` retains the legacy simulated-snapshot smoke path; `events` derives
+features from raw simulated subscription/activity/payment/renewal events. Default cutoffs
+and evaluation freeze (2026-11-03) are fixed for reproducibility. Run one writer per root.
 
 ## Verify
 
 ```bash
-python -m ruff check src tests scripts
-python -m ruff format --check src tests scripts
-python -m pytest -q
+source .venv/bin/activate
+bash scripts/local_smoke.sh
+python scripts/export_contracts.py
 python -m pip_audit -r requirements.lock --require-hashes --disable-pip
-python scripts/check_repository.py
-python scripts/cloud_preflight.py
+npm --prefix apps/web ci
+npm --prefix apps/web run lint
+npm --prefix apps/web run typecheck
+npm --prefix apps/web audit --audit-level=moderate
+npm --prefix apps/web run build
+cd apps/web
+npx playwright install chromium
+npm run test:e2e
 ```
 
-Cloud preflight is read-only. Missing CLI/account/project checks mean cloud readiness is
-unverified, not that the project has been deployed. See [observed evidence](docs/evidence/DAY1_2026-11-03.md).
+Browser tests launch a production web server and API against generated customer fixtures.
+Include System state, API-backed values, URL filters/pagination, pinned details,
+error/retry, loading, proxy bounds, desktop/mobile accessibility and keyboard scrolling in
+verification, and record observed results in `docs/evidence/`. CI includes the complete
+Compose web → API → published event-data path without cloud credentials.
+OpenAPI/TypeScript schemas are generated and checked for drift; unsupported schema
+constructs fail generation. Biome supplies frontend lint/format; Ruff and Pytest cover Python.
 
-## Container workflow
+## Project evidence and guides
 
-```bash
-docker compose run --rm pipeline
-docker compose up api
-```
+- [Event and renewal contract](docs/EVENT_CONTRACT.md), [analyst UX](docs/ANALYST_UX.md)
+- [Product scope](docs/PRD.md), [architecture](docs/ARCHITECTURE.md), [decisions](docs/DECISIONS.md)
+- [Thai learning log](docs/LEARNING_LOG_TH.md), [operations](docs/OPERATIONS.md)
+- [Cloud onboarding and concrete resource plan](docs/CLOUD_ONBOARDING_TH.md)
+- [Wayfinder map](https://github.com/Palapluem/RetentionOps/issues/5), [backlog](docs/BACKLOG.md)
+- [Day 1 evidence](docs/evidence/DAY1_2026-11-03.md), [event-run evidence](docs/evidence/events_run.json)
+- [ML evaluation protocol](docs/ML_EVALUATION.md), [synthetic model card](docs/MODEL_CARD.md)
+- [LightGBM candidate evidence](docs/evidence/ML_LIGHTGBM_2026-11-04.md) and [training/publication seam evidence](docs/evidence/ML_TEST_SEAMS_2026-11-04.md)
+- [Source-intake evidence](docs/evidence/source_intake_2026-11-03.json), [Day 1–4 re-audit](docs/evidence/DAYS1_4_REAUDIT_2026-11-07.md)
+- [Testing](docs/TESTING.md), [risks](docs/RISK_REGISTER.md), [release gates](docs/RELEASE_AUDIT.md)
 
-The services share a local named volume; API readiness follows pipeline publication.
-Host port 8000 binds to `127.0.0.1`. See [operations](docs/OPERATIONS.md) for recovery and
-volume lifecycle. A Dockerfile is not deployment evidence.
-
-## Understand and extend
-
-- [Product scope and implementation status](docs/PRD.md)
-- [Implemented and target architecture](docs/ARCHITECTURE.md)
-- [Data, label and license contracts](docs/DATA_CONTRACT.md)
-- [ML evaluation protocol](docs/ML_EVALUATION.md)
-- [Synthetic model card](docs/MODEL_CARD.md), [ROP-011 run evidence](docs/evidence/ML_LIGHTGBM_2026-11-04.md) and [training/publication seam evidence](docs/evidence/ML_TEST_SEAMS_2026-11-04.md)
-- [Decisions and alternatives](docs/DECISIONS.md)
-- [Thai learning log](docs/LEARNING_LOG_TH.md)
-- [Testing strategy](docs/TESTING.md), [risk register](docs/RISK_REGISTER.md)
-- [Release gates](docs/RELEASE_AUDIT.md), [backlog](docs/BACKLOG.md)
-- [Local source-intake and replay evidence](docs/evidence/source_intake_2026-11-03.json)
-
-The original Execution Kit is intentionally excluded from Git and Docker context. This repo
-contains reviewed implementation and project documentation, not the kit directory.
+The owner has not created a GCP account. No cloud resources, billing, IAM or public
+exposure were changed. SQLite serving and private service identity must be adapted and
+tested before cloud deployment. Real-data access needs a verified rights
+and label review. The original Execution Kit, raw data, model binaries, databases and secrets
+are excluded from Git; Docker build contexts exclude the kit and generated data.
