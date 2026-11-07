@@ -1,0 +1,57 @@
+{
+  "run_date": "2026-11-07",
+  "scope": "LOCAL_DOCKER_SYNTHETIC",
+  "ports_bound_to": "127.0.0.1",
+  "empty_startup": true,
+  "first_failed_source_intake": {
+    "publication_state": "empty",
+    "score_readiness_http": 503,
+    "run": {
+      "run_id": "c3d48408-4068-4d90-8ed6-17370ccb5834",
+      "mode": "source-intake",
+      "state": "failed",
+      "started_at": "2026-11-07T14:58:16.062111Z",
+      "finished_at": "2026-11-07T14:58:16.067456Z",
+      "model_version": null,
+      "output_rows": null,
+      "elapsed_seconds": 0.005345,
+      "error_type": "ValueError"
+    },
+    "container_health": {
+      "api": "healthy",
+      "web": "healthy"
+    }
+  },
+  "successful_publication": {
+    "score_readiness_http": 200,
+    "publication_state": "ready",
+    "model_artifact_state": "verified",
+    "model_version": "synthetic-logreg-64e14c63d69db95cb8176cd5c28858082f679d91bf5a04f57428b4daf618c409",
+    "model_family": "logistic_regression",
+    "model_sha256": "47dc019aca5ca86bec86693baa15313a1750d42f55d51b2d0527dc3f51067feb",
+    "scored_customers": 650,
+    "score_cutoff": "2026-09-30",
+    "run": {
+      "run_id": "798986f0-e7f2-4053-ae4e-7e7cf403a9b6",
+      "mode": "events",
+      "state": "succeeded",
+      "started_at": "2026-11-07T14:59:17.304720Z",
+      "finished_at": "2026-11-07T14:59:18.576450Z",
+      "model_version": "synthetic-logreg-64e14c63d69db95cb8176cd5c28858082f679d91bf5a04f57428b4daf618c409",
+      "output_rows": 650,
+      "elapsed_seconds": 1.27173,
+      "error_type": null
+    },
+    "prior_failure_retained": true,
+    "workspace_consistent_release": true
+  },
+  "runtimes": {
+    "python": "Python 3.11.18",
+    "node": "v24.22.2"
+  },
+  "images": {
+    "api": "sha256:78b8b1c3dcc74d71c5ae38eb734f188b6c00e798c237e95fbb6c2e88909b0f55",
+    "web": "sha256:58e9729eaab5a7a74715f219bee231ae774ba0d376945fa7d92ae44bd7c549b1"
+  },
+  "verification_resources_removed": true
+}

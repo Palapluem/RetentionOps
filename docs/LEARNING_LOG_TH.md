@@ -231,3 +231,29 @@ Data & model แสดง lineage/run history ไม่ใช่ telemetry ข�
 LightGBM branch ยังมี conflict ใน API/pipeline/storage/docs; รายละเอียดและข้อจำกัดรอบนี้
 บันทึกไว้ที่ `docs/evidence/DAYS1_4_REAUDIT_2026-11-07.md` การตรวจ pip-audit บนเครื่อง
 ติด DNS ไป PyPI แต่ CI ล่าสุดผ่านขั้นตอน audit แล้ว
+
+## 7 พฤศจิกายน — รวม API กับ System dashboard ที่ตรวจสถานะได้จริง
+
+รวม analyst workspace เข้ากับ pipeline ล่าสุดและแก้จุดที่หน้าเดิมระบุ Logistic Regression
+ตายตัว ตอนนี้ overview, model status, customer detail และหน้า System อ่าน model family,
+candidate/config และ validation AP จาก manifest ของโมเดลที่เลือก รวมถึงกรณี LightGBM
+คะแนนและ feature snapshots ของ release เดิมห้ามเปลี่ยน; exact replay ผ่าน แต่ payload
+ที่ขัดกันต้อง rollback และคง active release ก่อนหน้า
+
+หน้าแรกเป็น System dashboard แล้ว โดยแสดงผัง source → features → selected model → scores
+→ API พร้อม source/label provenance, checksum และประวัติ stage จริง แยกเวลาเช็คสถานะออก
+จาก historical cutoff และ source watermark ข้อมูลในเครื่องยังเป็น synthetic ทั้งหมด
+ส่วน GCP กับ authentication แสดงตามสถานะที่ยังไม่ตั้งค่า
+
+พบจาก review ว่าถ้า Compose รอ `/ready` ก่อนเปิดเว็บ ผู้ใช้จะดูรันแรกที่ล้มเหลวไม่ได้
+จึงเปลี่ยน healthcheck ให้ดู liveness และ System status ส่วน `/ready` ยังคุมว่าคะแนนพร้อม
+อ่านหรือไม่ ทดลอง volume ว่างแล้ว web/API healthy, failed intake มองเห็นได้และ readiness
+เป็น 503 จากนั้น pipeline สำเร็จ 650 คะแนนและ readiness เป็น 200 โดย failure เดิมยังอยู่
+source generation/intake บันทึกผลหลัง output/validation; model success commit พร้อม scores
+ใน transaction เดียว เป็นคนละขอบเขต commit ที่ต้องอธิบายให้ชัด
+
+ผลรอบสุดท้าย: local smoke ผ่าน 111 tests, browser ผ่าน 20 tests รวม Axe และ mobile,
+production build/typecheck/lint ผ่าน และ pip-audit/npm audit ไม่พบช่องโหว่ที่รู้จัก
+เก็บภาพหน้า System และหลักฐานจริงไว้ใน
+`docs/evidence/SYSTEM_WORKSPACE_2026-11-07.md` งานนี้ติดตามด้วย issue #16 และยังต้อง human
+review ก่อน merge; source rights/cloud release gates ยังเปิดอยู่

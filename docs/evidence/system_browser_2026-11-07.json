@@ -1,0 +1,40 @@
+{
+  "run_date": "2026-11-07",
+  "mode": "LOCAL_DOCKER_SYNTHETIC",
+  "browser": "Chromium headless",
+  "publication_state": "ready",
+  "model_artifact_state": "verified",
+  "model_family": "logistic_regression",
+  "model_version": "synthetic-logreg-64e14c63d69db95cb8176cd5c28858082f679d91bf5a04f57428b4daf618c409",
+  "model_sha256": "47dc019aca5ca86bec86693baa15313a1750d42f55d51b2d0527dc3f51067feb",
+  "dataset_sha256": "cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
+  "source_release_id": "synthetic-cb701245a13536fc6892de34e84d094c4e034a11e43f5f6d28777169c81628be",
+  "event_release_id": "synthetic-events-5d87b2212f71869814953c4908c1e0fe58832d6ad7467804746b8f3f1b513483",
+  "score_cutoff": "2026-09-30",
+  "scored_customers": 650,
+  "source_truth": {
+    "status": "simulated",
+    "source_type": "SYNTHETIC",
+    "label_definition": "No renewal in [scheduled expiry, expiry + 30 days] for a simulated subscription, with a complete source watermark and mature outcome window.",
+    "external_source_connected": false
+  },
+  "desktop_width": {
+    "document": 1440,
+    "viewport": 1440
+  },
+  "mobile_width": {
+    "document": 390,
+    "viewport": 390
+  },
+  "routes": {
+    "/overview": 200,
+    "/risk?band=watch&auto_renew=0": 200,
+    "/cohorts": 200,
+    "/status": 200
+  },
+  "page_errors": [],
+  "screenshots": [
+    "system-desktop.png",
+    "system-mobile.png"
+  ]
+}

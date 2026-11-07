@@ -141,6 +141,7 @@ constructs fail generation. Biome supplies frontend lint/format; Ruff and Pytest
 - [ML evaluation protocol](docs/ML_EVALUATION.md), [synthetic model card](docs/MODEL_CARD.md)
 - [LightGBM candidate evidence](docs/evidence/ML_LIGHTGBM_2026-11-04.md) and [training/publication seam evidence](docs/evidence/ML_TEST_SEAMS_2026-11-04.md)
 - [Source-intake evidence](docs/evidence/source_intake_2026-11-03.json), [Day 1–4 re-audit](docs/evidence/DAYS1_4_REAUDIT_2026-11-07.md)
+- [Integrated System dashboard and bootstrap evidence](docs/evidence/SYSTEM_WORKSPACE_2026-11-07.md)
 - [Testing](docs/TESTING.md), [risks](docs/RISK_REGISTER.md), [release gates](docs/RELEASE_AUDIT.md)
 
 The owner has not created a GCP account. No cloud resources, billing, IAM or public
