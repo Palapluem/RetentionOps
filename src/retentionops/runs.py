@@ -1,4 +1,4 @@
-"""Record actual job attempts; successful state commits with the score publication."""
+"""Record stage attempts; model success commits with the score publication."""
 
 import logging
 import sqlite3
@@ -7,6 +7,28 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from .storage import SCHEMA
+
+
+def complete_source_stage(root, run_id, output_rows):
+    """Record successful generation/intake after its output is complete and validated."""
+    with sqlite3.connect(root / "artifacts/serving.sqlite", timeout=30) as conn:
+        started = conn.execute(
+            "SELECT started_at FROM pipeline_runs WHERE run_id=? AND state='running'",
+            (run_id,),
+        ).fetchone()
+        if started is None:
+            raise ValueError("Source completion requires a running stage")
+        finished = datetime.now(UTC)
+        conn.execute(
+            "UPDATE pipeline_runs SET state='succeeded',finished_at=?,output_rows=?, "
+            "elapsed_seconds=? WHERE run_id=?",
+            (
+                finished.isoformat(),
+                output_rows,
+                max(0, (finished - datetime.fromisoformat(started[0])).total_seconds()),
+                run_id,
+            ),
+        )
 
 
 @contextmanager

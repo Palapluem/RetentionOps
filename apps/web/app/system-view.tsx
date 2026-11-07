@@ -186,6 +186,29 @@ function SystemContent({ refresh }: { refresh: () => void }) {
                 : "Release details cannot be trusted until the publication is repaired. Pipeline attempts below may help identify the failure."}
             </p>
           )}
+          {active && (
+            <details className="hash-details">
+              <summary>Source & artifact evidence</summary>
+              <dl className="lineage">
+                <dt>Source release</dt>
+                <dd>
+                  <code>{active.source_release_id}</code>
+                </dd>
+                <dt>Event release</dt>
+                <dd>
+                  <code>{active.event_release_id || "Snapshot source"}</code>
+                </dd>
+                <dt>Dataset SHA-256</dt>
+                <dd>
+                  <code>{active.dataset_sha256}</code>
+                </dd>
+                <dt>Model SHA-256</dt>
+                <dd>
+                  <code>{active.model_sha256}</code>
+                </dd>
+              </dl>
+            </details>
+          )}
         </section>
         <section className="panel source-truth">
           <div className="section-heading">
@@ -214,13 +237,17 @@ function SystemContent({ refresh }: { refresh: () => void }) {
       <section className="panel">
         <div className="section-heading">
           <h2>Pipeline attempts</h2>
-          <span className="subtle-label">Latest 10 recorded model runs</span>
+          <span className="subtle-label">Latest 10 recorded stage attempts</span>
         </div>
         <RunHistoryTable
           runs={data.runs}
           label="System pipeline attempts"
           emptyMessage="No pipeline attempt is recorded. Run the synthetic pipeline to begin."
         />
+        <p className="caption">
+          Source stages count event revisions; model stages count scored customers. Attempt state is
+          the last recorded transition.
+        </p>
       </section>
       <section className="panel">
         <div className="section-heading">

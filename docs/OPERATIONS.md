@@ -25,6 +25,8 @@ The API hashes model bytes without deserializing them. A missing or mismatched a
 investigation even when existing materialized scores remain readable. Source truth identifies
 the simulated snapshot or renewal label. Infrastructure reports local SQLite, cloud not
 connected and authentication not configured; these fields do not verify GCP readiness.
+Expand Source & artifact evidence for the active source/event release IDs and dataset/model
+checksums when tracing the displayed publication.
 
 ### Ingest and replay an event source
 
@@ -48,6 +50,12 @@ The replay verifies the source and manifest before deriving features or training
 source bytes with the same source ID and watermark are idempotent. Failed validation leaves
 no new event release and does not alter the serving publication. This path does not connect
 to GCS or BigQuery; cloud ingestion remains a separate gated implementation.
+
+The CLI records `generate-events` as `source-generation` and `ingest-events` as `source-intake`.
+Source-stage success is recorded after file output or intake validation/publication finishes.
+Filesystem output and the run-history database have separate commit boundaries; an existing
+source output does not prove that its attempt status was persisted. Source stages leave the
+active model release unchanged.
 
 To avoid overwriting an earlier experiment, pass `--root` and matching `RETENTIONOPS_ROOT`.
 Do not load joblib files from an untrusted source; they are executable serialization. The
@@ -82,8 +90,12 @@ pointer alone or claim a cloud rollback drill has passed.
 
 ## Docker
 
-`docker compose run --rm pipeline` populates the `demo` volume; `docker compose up api`
-serves it read-only. The image uses an unprivileged user. Stop with `docker compose down`;
+`docker compose up --build --wait api web` can start against an empty `demo` volume.
+The API healthcheck uses `/health`, and the web healthcheck uses the same-origin
+`/api/retention/system-status`; both allow System to show empty/first-failed state.
+`/ready` separately requires a reconciled score publication. Run
+`docker compose run --rm pipeline` to populate the volume; the API serves it read-only.
+The image uses an unprivileged user. Stop with `docker compose down`;
 that retains the local demo volume. `docker compose down --volumes` deliberately removes
 that generated demo state, so use it only when the owner intends to discard it. No host
 source directory is mounted into the container.
@@ -109,16 +121,18 @@ until its resource plan and safety conditions are verified.
 ## System and analyst workspace operation
 
 A named local environment can be started with
-`docker compose -p retentionops-day1 run --rm --build pipeline` then
-`docker compose -p retentionops-day1 up --build --wait api web`.
+`docker compose -p retentionops-day1 up --build --wait api web`, followed by
+`docker compose -p retentionops-day1 run --rm pipeline` when ready to publish.
 Product: http://127.0.0.1:3000; API: http://127.0.0.1:8000/docs.
 Run the event pipeline after upgrading; it creates the new feature/run tables during the
 writer step. API startup never migrates or writes storage. `/ready` reconciles scored keys
 with feature rows and all cohort counts, not only database existence.
 
-All model run modes record actual attempts: `snapshots` from `all`, generated `events` from
-`events`, and ingested `event-source` from `run-events`. Successful job state commits with
-features, scores and the active pointer; failed attempts retain the last valid result.
+Source and model stages record actual attempts. Model modes are `snapshots` from `all`,
+generated `events` from `events`, and ingested `event-source` from `run-events`.
+Model success commits with features, scores and the active pointer; failed attempts retain
+the last valid result. The run table's Output rows counts event revisions for source stages
+and scored customers for model stages.
 Process termination can leave a running attempt: inspect the actual process and
 replay manually; automatic stale-job reconciliation/cloud orchestration is not implemented.
 A replay records a new attempt but retains the immutable model training timestamp.

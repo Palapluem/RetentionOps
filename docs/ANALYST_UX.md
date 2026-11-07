@@ -44,6 +44,11 @@ visible before the first successful release when history is readable. Source tru
 both snapshot and event outcomes as simulated; cloud is not connected and authentication
 is not configured. No utilization, latency, uptime or cloud resource values are invented.
 Data & model shows the selected model family, candidate/configuration and validation AP.
+Source & artifact evidence expands to show actual source/event release IDs and dataset/model
+checksums. The attempt table covers source generation/intake and model runs; Output rows
+counts event revisions for source stages and scored customers for model stages. A successful
+source attempt leaves model publication unchanged. Liveness-based service startup keeps
+empty or first-failed System state accessible before score readiness is available.
 
 Next.js handles a single same-origin read proxy with a fixed backend and allowlisted paths;
 FastAPI validates inputs and response models. Types are generated from exported OpenAPI.

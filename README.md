@@ -15,7 +15,8 @@ Synthetic JSONL → staged validation → immutable source release
 
 The product opens on the System dashboard, with publication readiness, model-artifact
 checksum state, source/label provenance and actual pipeline attempts. It shows local SQLite
-serving, cloud as not connected and authentication as not configured. Retention views expose
+serving, cloud as not connected and authentication as not configured. Expand Source & artifact
+evidence for source/event release IDs and dataset/model checksums. Retention views expose
 the selected model's metrics, family/configuration, historical scores and mature cohort
 denominators. Risk filters and pagination survive refresh and shared links through the URL.
 
@@ -33,14 +34,17 @@ a business ground-truth definition are still open gates.
 ## Run with Docker
 
 ```bash
-docker compose -p retentionops-day1 run --rm --build pipeline
 docker compose -p retentionops-day1 up --build --wait api web
+docker compose -p retentionops-day1 run --rm pipeline
 ```
 
 Open the product at <http://127.0.0.1:3000/> and API reference at
 <http://127.0.0.1:8000/docs>. API and web ports bind to loopback; the API volume is read-only.
 The named project keeps its generated demo state in a local volume.
 `docker compose -p retentionops-day1 down` stops the containers and preserves demo data.
+API/web healthchecks allow startup on a fresh volume, where System shows an empty publication.
+Run the pipeline and refresh to inspect the published release. `/ready` remains the separate
+score-readiness check and returns 503 until a valid release exists.
 
 ## Receive and replay a source in separate stages
 
@@ -62,6 +66,9 @@ temporal evaluation and publication. Identical input is idempotent; failed intak
 release. The adapter accepts the synthetic event contract only, not KKBox or real customer
 data. See [event and renewal semantics](docs/EVENT_CONTRACT.md). These are simulated
 subscription opportunities, not a real-world accuracy result.
+Generation and intake appear as separate source-stage attempts; successful source stages
+do not activate a model. Their Output rows count event revisions, while model-run rows count
+scored customers. See [operation boundaries](docs/OPERATIONS.md).
 
 ## Run manually
 
@@ -117,7 +124,9 @@ Browser tests launch a production web server and API against generated customer 
 Include System state, API-backed values, URL filters/pagination, pinned details,
 error/retry, loading, proxy bounds, desktop/mobile accessibility and keyboard scrolling in
 verification, and record observed results in `docs/evidence/`. CI includes the complete
-Compose web → API → published event-data path without cloud credentials.
+Compose web → API → published event-data path without cloud credentials. Its container job
+is configured to check empty startup and failed-intake history with `/ready` at 503 before
+running a successful pipeline and requiring `/ready` at 200.
 OpenAPI/TypeScript schemas are generated and checked for drift; unsupported schema
 constructs fail generation. Biome supplies frontend lint/format; Ruff and Pytest cover Python.
 

@@ -17,6 +17,11 @@ test("home shows the actual local system release and source boundary", async ({
     page.getByRole("list", { name: "Local pipeline stages" }).getByRole("listitem"),
   ).toHaveCount(5);
   await expect(page.getByText(actual.active_release.model_version, { exact: true })).toBeVisible();
+  await page.getByText("Source & artifact evidence", { exact: true }).click();
+  await expect(
+    page.getByText(actual.active_release.event_release_id, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(actual.active_release.model_sha256, { exact: true })).toBeVisible();
   await expect(
     page.getByText(`${actual.scored_customers} rows reconciled`, { exact: true }),
   ).toBeVisible();

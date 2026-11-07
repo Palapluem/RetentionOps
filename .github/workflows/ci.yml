@@ -39,8 +39,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - run: docker compose run --rm pipeline
       - run: docker compose up --build --wait api web
+      - name: Verify the first failed source intake remains observable
+        run: |
+          if docker compose run --rm --build pipeline retentionops ingest-events --root /workspace --input /workspace/missing.jsonl --source-id missing-source --complete-through 2026-11-03; then
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          import urllib.error
+          import urllib.request
+          with urllib.request.urlopen('http://127.0.0.1:3000/api/retention/system-status') as response:
+              state = json.load(response)
+          assert state['publication_state'] == 'empty'
+          assert state['runs'][0]['mode'] == 'source-intake'
+          assert state['runs'][0]['state'] == 'failed'
+          try:
+              urllib.request.urlopen('http://127.0.0.1:8000/ready')
+          except urllib.error.HTTPError as error:
+              assert error.code == 503
+          else:
+              raise AssertionError('An empty system must not be ready for scores')
+          PY
+      - run: docker compose run --rm pipeline
       - run: curl --fail http://127.0.0.1:8000/ready
       - run: curl --fail 'http://127.0.0.1:3000/api/retention/workspace?limit=1'
       - if: always()

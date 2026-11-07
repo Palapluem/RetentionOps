@@ -8,6 +8,7 @@ from pathlib import Path
 from .data import DEFAULT_AS_OF, SEED, sha256_file
 from .events import generate_events, ingest_event_source
 from .pipeline import run_event_pipeline, run_event_source_pipeline, run_pipeline
+from .runs import complete_source_stage, tracked_run
 
 
 def main() -> None:
@@ -25,27 +26,34 @@ def main() -> None:
     parser.add_argument("--complete-through", type=date.fromisoformat)
     parser.add_argument("--source-release", help="Previously ingested event release ID")
     args = parser.parse_args()
+    root = args.root.resolve()
     try:
         if args.command == "generate-events":
             if args.output is None:
                 parser.error("generate-events requires --output")
-            rows = generate_events(args.output, args.customers, args.seed)
-            result = {"output": str(args.output), "rows": rows, "sha256": sha256_file(args.output)}
+            with tracked_run(root, "source-generation") as run_id:
+                rows = generate_events(args.output, args.customers, args.seed)
+                result = {
+                    "output": str(args.output),
+                    "rows": rows,
+                    "sha256": sha256_file(args.output),
+                }
+                complete_source_stage(root, run_id, rows)
         elif args.command == "ingest-events":
             if args.input is None or args.source_id is None or args.complete_through is None:
                 parser.error("ingest-events requires --input, --source-id, and --complete-through")
-            result = ingest_event_source(
-                args.input, args.root, args.source_id, args.complete_through
-            )
+            with tracked_run(root, "source-intake") as run_id:
+                result = ingest_event_source(
+                    args.input, root, args.source_id, args.complete_through
+                )
+                complete_source_stage(root, run_id, result["rows"])
         elif args.command == "run-events":
             if args.source_release is None:
                 parser.error("run-events requires --source-release")
-            result = run_event_source_pipeline(
-                args.root, args.source_release, args.seed, args.as_of
-            )
+            result = run_event_source_pipeline(root, args.source_release, args.seed, args.as_of)
         else:
             run = run_event_pipeline if args.command == "events" else run_pipeline
-            result = run(args.root, args.customers, args.seed, args.as_of)
+            result = run(root, args.customers, args.seed, args.as_of)
     except (ValueError, OSError) as exc:
         parser.exit(1, f"Pipeline failed; active publication unchanged: {exc}\n")
     print(json.dumps(result, indent=2))

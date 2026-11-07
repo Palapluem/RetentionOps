@@ -45,6 +45,13 @@ const views: { id: View; label: string; description: string }[] = [
   },
 ];
 const bandName = { high: "High", watch: "Watch", low: "Lower" };
+const runNames: Record<string, string> = {
+  events: "Event pipeline",
+  snapshots: "Snapshot pipeline",
+  "event-source": "Source replay",
+  "source-generation": "Source generation",
+  "source-intake": "Source intake",
+};
 const featureNames: Record<string, string> = {
   active_days_30d: "Active days in 30 days",
   payment_failures_90d: "Failed payments in 90 days",
@@ -607,7 +614,7 @@ export function RunHistoryTable({
             <th scope="col">Started</th>
             <th scope="col">Pipeline</th>
             <th scope="col">State</th>
-            <th scope="col">Scored rows</th>
+            <th scope="col">Output rows</th>
             <th scope="col">Duration</th>
             <th scope="col">Error type</th>
           </tr>
@@ -616,7 +623,7 @@ export function RunHistoryTable({
           {runs.map((run) => (
             <tr key={run.run_id}>
               <td>{timestamp(run.started_at)}</td>
-              <td>{run.mode === "events" ? "Event pipeline" : run.mode}</td>
+              <td>{runNames[run.mode] || run.mode}</td>
               <td>
                 <span
                   className={`badge ${run.state === "succeeded" ? "low" : run.state === "failed" ? "high" : "watch"}`}
