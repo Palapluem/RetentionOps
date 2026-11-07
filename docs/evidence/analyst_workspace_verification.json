@@ -1,0 +1,60 @@
+{
+  "verification_date": "2026-11-03",
+  "data_mode": "SYNTHETIC",
+  "scope": "Local API, event pipeline, Docker Compose, Next.js production build, and Chromium browser checks",
+  "pipeline": {
+    "run_id": "b037919e-c0e6-49e1-81f9-93787f9b6348",
+    "state": "succeeded",
+    "mode": "events",
+    "model_version": "synthetic-logreg-0913ba15793f6ea3fe2bea24b2cf6d01aa5b29cd7334fc805f2953a44e2e5fdd",
+    "event_release_id": "synthetic-events-ca4d06cc3e72589203548b6d1bf373c07ff6d9b07fc8db8c26703d0480f94fc5",
+    "input_event_revisions": 69748,
+    "customers": 650,
+    "feature_rows": 2600,
+    "score_cutoff": "2026-09-30",
+    "cohorts": [
+      { "cutoff": "2026-06-30", "eligible": 650, "churned": 111 },
+      { "cutoff": "2026-07-31", "eligible": 650, "churned": 100 },
+      { "cutoff": "2026-08-31", "eligible": 650, "churned": 99 },
+      { "cutoff": "2026-09-30", "eligible": 650, "churned": 104 }
+    ],
+    "test_metrics": {
+      "average_precision": 0.25150571159809365,
+      "constant_prior_average_precision": 0.16,
+      "roc_auc": 0.6779990842490843,
+      "brier": 0.13170363343879352,
+      "recall_at_10pct": 0.18269230769230768,
+      "log_loss": 0.4216621782463329
+    },
+    "limitations": [
+      "Metrics are from generated synthetic historical data only.",
+      "The simulated renewal label is not a verified KKBox label.",
+      "Repeated customer cohorts are not unseen-customer evaluation.",
+      "Predictive risk does not measure campaign uplift or causal retention impact."
+    ]
+  },
+  "verification": {
+    "python_tests": "79 passed; one upstream Starlette/httpx deprecation warning",
+    "event_pr_standalone_tests": "62 passed; one upstream Starlette/httpx deprecation warning",
+    "ruff": "passed",
+    "python_dependency_audit": "0 known vulnerabilities",
+    "frontend_lint_typecheck_build": "passed",
+    "npm_audit": "0 known vulnerabilities",
+    "chromium_browser_tests": "12 passed against production standalone server",
+    "axe_accessibility": "0 violations on Overview, Risk, Cohorts and Data & model routes",
+    "mobile_and_keyboard": "390px viewport has no document overflow; cohort overflow is keyboard reachable",
+    "docker_compose": "API and web healthy; API ready returned HTTP 200; same-origin workspace returned HTTP 200",
+    "repository_hygiene": "passed across 87 tracked paths; original Execution Kit is excluded"
+  },
+  "screenshots": [
+    "analyst-overview.png",
+    "analyst-risk.png",
+    "analyst-cohorts.png",
+    "analyst-status.png"
+  ],
+  "external_services": {
+    "gcp_account": false,
+    "cloud_resources_created": false,
+    "external_customer_data_downloaded": false
+  }
+}

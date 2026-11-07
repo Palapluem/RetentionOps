@@ -14,7 +14,17 @@
 | 2026-11-03 | API-backed smoke HTML before Next.js product UI | Verifies the vertical slice early; not a substitute for the planned product frontend |
 | 2026-11-03 | Target GCS/BigQuery/Cloud Run/Scheduler with OIDC | Managed batch architecture; no resource creation before account/region/budget/IAM approval |
 | 2026-11-03 | Keep shared Python under src until service boundaries exist | Avoid empty monorepo scaffolding; move entrypoints into apps/services when independently operated |
+| 2026-11-03 | Latest known contiguous event revisions before right-exclusive windows | Prevent obsolete revisions reappearing after corrections; day-grain synthetic semantics are explicit |
+| 2026-11-03 | Atomic features, scores, active pointer and successful job state | Reconcile keys as well as counts; failed attempts are recorded without replacing the prior result |
+| 2026-11-03 | One workspace read transaction; model-pinned customer details | Avoid cross-request mixed releases while keeping bounded paginated views |
+| 2026-11-03 | Next.js 16 / React 19 / Node 24+ and a server-only fixed proxy | Real analyst workflows without browser backend credentials; cloud service authentication remains a gate |
+| 2026-11-03 | Biome plus a small fail-closed OpenAPI schema type exporter | Remove dev-tool dependency chain affected by [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249); 0 known npm advisories after replacement, no unsafe major overrides; supported schema subset is tested |
 | 2026-11-04 | Select the model and bounded LightGBM parameters by validation AP; keep the experiment in the immutable local manifest | Avoid test leakage and an extra tracking service; publish only the selected model's test scores through the existing SQLite transaction; cloud scoring remains gated by ROP-002 |
+| 2026-11-07 | Integrate workspace reads with the selected model and immutable feature/score replay | Keep metrics, details and lineage aligned for Logistic Regression and LightGBM; record source/model attempts and preserve the prior release on failure; tracked in [the system integration issue](https://github.com/Palapluem/RetentionOps/issues/16) |
+| 2026-11-07 | Make System the web entry view and inspect local state independently of a successful publication | Expose empty/unavailable states and actual attempts; verify model bytes by checksum without deserialization; identify simulated labels, unconnected cloud and unconfigured authentication |
+| 2026-11-07 | Encode risk search, filters and pagination in the URL | Preserve review state across refresh, shared links and browser history while retaining bounded API filters |
+| 2026-11-07 | Record source generation/intake completion after output or validation | Keep filesystem and run-history commit boundaries explicit; source rows count event revisions, model rows count scored customers, and model success remains atomic with publication |
+| 2026-11-07 | Use liveness checks to start the local API and web without a publication | Compose checks `/health` and same-origin System status so empty/first-failed state remains visible; `/ready` independently gates score readiness |
 
 Revisit a decision when measured evidence changes its assumptions. Record that evidence and
 the relevant issue/PR; do not silently expand infrastructure or label semantics.

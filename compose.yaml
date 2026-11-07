@@ -11,9 +11,23 @@ services:
     volumes:
       - demo:/workspace:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 15s
       timeout: 5s
+      retries: 3
+  web:
+    build: ./apps/web
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      RETENTIONOPS_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/retention/system-status').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 8s
       retries: 3
 volumes:
   demo:

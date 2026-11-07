@@ -15,6 +15,10 @@ snapshot กับรายงานคุณภาพ Interface นี้ใช
 เพราะเป็นคนละนิยามกัน `available_at` บอกว่าเรารู้ event เมื่อไร ต่างจากวันเกิด event
 ส่วน watermark บอกว่าข้อมูลครอบคลุมถึงวันใด จึงจะสรุปว่าไม่มี renewal ได้อย่างมีเงื่อนไข
 renewal ที่ส่งมาช้าต้องเลื่อน label availability และอาจไม่ผ่าน embargo ของ cohort ถัดไป
+กรณีแก้ไขที่ลบ renewal ออกจากช่วงเวลา (เช่นเปลี่ยน `occurred_at`, `expiry_date` หรือ
+tombstone) ก็ต้องเลื่อน availability เช่นกัน เพราะค่าป้าย churn ปัจจุบันอาศัย correction
+ที่เพิ่งรู้ หากนับเฉพาะ revision ล่าสุดที่ยังเข้า window ข้อมูลอนาคตจะรั่วเข้าชุด train
+โดยไม่เห็นวันแก้ไข จึงเพิ่ม fixture หลาย cohort ที่ให้ `temporal_split` ปฏิเสธกรณีนี้
 
 รัน `retentionops events --customers 650` เพื่อสร้าง raw JSONL → validated features
 → CSV/Parquet → โมเดล/metrics → scores โดย Parquet เก็บวันเป็น DATE ไม่ใช่ข้อความ
@@ -127,6 +131,47 @@ branch protection/Project board เป็นสถานะที่ต้อง
 ขั้นถัดไปคือ review หลักฐาน Day 1 แล้วสร้าง event-derived features และ cloud plan ที่มี
 ขอบเขต ค่าใช้จ่ายและ cleanup ชัดเจน ก่อนขออนุมัติสร้างทรัพยากรที่มีค่าใช้จ่าย
 
+## รอบต่อยอด: analyst workspace, API contracts และ job publication
+
+`serving.py` อ่าน Overview/Risk/Cohorts/Model status ภายใน transaction เดียวและคืน
+`Workspace` ที่มี model version สอดคล้องกันทั้งชุด ช่วยตัดปัญหาอ่านสี่ endpoint ระหว่าง
+มีการ publish แล้วได้ข้อมูลปนคนละเวอร์ชัน ตัวกรองเป็น query parameters ที่ validate แล้ว
+และ SQL bind values เสมอ ไม่ต่อข้อความผู้ใช้เป็น SQL รายละเอียดลูกค้า pin model version
+จึงไม่กระโดดไปใช้ผลชุดใหม่ขณะเปิด dialog
+
+เพิ่ม feature snapshots ที่ grain model × customer × cutoff และตรวจคีย์ที่เชื่อมกับ scores
+การนับแถวเท่ากันยังไม่พอ เช่นแทน ID ลูกค้าหนึ่งรายด้วย ID ใหม่ จำนวนเท่าเดิมแต่ join ไม่ครบ
+publisher ต้อง reject และ readiness ต้องไม่ผ่าน หลักฐานอยู่ใน `tests/test_workspace.py`
+`runs.py` บันทึก job attempts จริง โดย successful state commit พร้อม publication ส่วน
+exception บันทึก failed แล้วเก็บ active result เดิม การหยุด process แบบ kill ยังต้องดู
+run ที่ค้าง running และ replay ด้วยผู้ปฏิบัติ ไม่ใช่อ้างว่าเป็น durable cloud orchestration
+API `/api/v1/jobs` อ่านประวัติ attempt ได้แยกจาก active publication เพื่อให้ผู้ใช้เห็น
+ความล้มเหลวครั้งแรกตอนยังไม่มี release; หน้า error จะบอกสถานะ publication จากข้อมูลนี้
+
+Next.js อยู่ใน `apps/web/` ใช้ TypeScript, React และ CSS ที่ควบคุมจาก tokens เดียว
+เลือกเพราะเหมาะกับ UI หลายหน้าที่เชื่อม typed backend และสร้าง production container ได้
+ข้อมูลเข้าเป็น workspace JSON ผ่าน same-origin proxy; ข้อมูลออกเป็นตัวกรอง ตาราง กราฟ
+cohort และ lineage ที่อ่านได้ ไม่มีการฝึกโมเดลจากการเปิดเว็บ ไม่มีการประเมิน uplift
+API URL อยู่ฝั่ง server และ proxy อนุญาตเฉพาะ path ที่กำหนด ไม่รับ URL ปลายทางจากผู้ใช้
+
+สัญญาเริ่มที่ Pydantic → OpenAPI → schema types ของ frontend ผ่าน `export_contracts.py`
+ตัว exporter รองรับ primitives, enums, arrays, objects, unions และ local references ที่ใช้จริง
+ถ้ามี schema construct ใหม่ที่ไม่รองรับจะหยุด generation ให้เพิ่ม test ก่อน ไม่ปล่อยชนิด
+ข้อมูลผิดเงียบ ๆ Runtime response validation ยังอยู่ที่ FastAPI; TypeScript ไม่ใช่ runtime validator
+
+รัน `npm run lint`, `npm run typecheck`, `npm run build` ใน apps/web และทดสอบด้วย
+`npm run test:e2e` หลัง activate Python venv Browser tests ใช้ production standalone server
+กับ API และ pipeline จริงของ fixture 150 ลูกค้า ตรวจตัวเลขจาก API, filter, pagination,
+model pinning, loading/error/retry, mobile overflow, keyboard และ axe accessibility
+ในงานทดสอบพบว่า hint ของ metrics ต้องอยู่ภายใน dd และชื่อที่ screen reader อ่านต้องมี
+ข้อความที่มองเห็นของปุ่มกราฟ ตารางที่เลื่อนแนวนอนต้องมี keyboard focus target ด้วย
+
+ข้อแลกเปลี่ยน: UI ใช้ workspace response เดียวและ client interactions ที่ไม่มี chart library
+เหมาะกับข้อมูลทดลองขนาดนี้; ขยายจริงควร materialize/cache governed warehouse summaries
+แทน scan JSON ทุก request ส่วน job และ SQLite เป็น local implementation ที่รัน writer เดียว
+เมื่อขึ้น GCP ต้องเปลี่ยน storage/identity และทดสอบ integration/rollback/cost จริง
+บัญชี GCP ยังไม่ได้สมัคร จึงเตรียมแผนทรัพยากรกับคู่มือโดยไม่มีการ provision หรือเปิด billing
+
 ## 4 พฤศจิกายน — เปรียบเทียบ LightGBM โดยไม่แตะ test ตอนเลือก
 
 เพิ่ม LightGBM แบบ CPU deterministic และ grid ที่กำหนดไว้สามชุด โดย fit candidate จาก
@@ -168,3 +213,47 @@ rollback และรักษาทั้งคะแนนเดิมกั�
 
 หลักฐานรอบนี้อยู่ใน `docs/evidence/ML_TEST_SEAMS_2026-11-04.md` ผลทั้งหมดเป็น synthetic
 และ local; ไม่ใช่ผล KKBox, cloud integration หรือ production release evidence
+
+## 7 พฤศจิกายน — ทบทวน Day 1–4 ก่อนเริ่ม API slice
+
+ตรวจแผนกับ PR และรันซ้ำใน temporary roots: Day 1–4 ผ่านในขอบเขต synthetic/local ได้แก่
+81 tests, Ruff check/format, snapshot/event pipeline, การรับ event แยกขั้นและ replay ซ้ำ
+โดยได้ source release/model version เดิมและคะแนน 650 แถวที่ customer key ไม่ซ้ำ API
+health/ready/overview/risk ผ่านใน TestClient ส่วน `/api/v1/model-status` ยังไม่มีใน branch
+ที่ checkout อยู่และเป็นจุดเชื่อมของ API/dashboard slice ถัดไป
+
+ยืนยันซ้ำว่า label ทั้งสองเส้นทางยังเป็นข้อมูลจำลอง: snapshot ใช้ seeded draw ส่วน event
+นับการไม่ต่ออายุในช่วง 30 วันหลัง scheduled expiry ไม่มีแหล่ง ground-truth ที่ได้รับอนุญาต
+สิทธิ์ KKBox หรือบัญชี GCP ที่ยืนยันแล้ว จึงห้ามอ้างผลลูกค้าจริงหรือการ deploy
+
+หน้า Next.js สี่มุมมองอยู่ใน PR #9 และ CI browser ผ่าน แต่ PR ยังไม่ merge และหน้า
+Data & model แสดง lineage/run history ไม่ใช่ telemetry ของ infrastructure การรวมกับ
+LightGBM branch ยังมี conflict ใน API/pipeline/storage/docs; รายละเอียดและข้อจำกัดรอบนี้
+บันทึกไว้ที่ `docs/evidence/DAYS1_4_REAUDIT_2026-11-07.md` การตรวจ pip-audit บนเครื่อง
+ติด DNS ไป PyPI แต่ CI ล่าสุดผ่านขั้นตอน audit แล้ว
+
+## 7 พฤศจิกายน — รวม API กับ System dashboard ที่ตรวจสถานะได้จริง
+
+รวม analyst workspace เข้ากับ pipeline ล่าสุดและแก้จุดที่หน้าเดิมระบุ Logistic Regression
+ตายตัว ตอนนี้ overview, model status, customer detail และหน้า System อ่าน model family,
+candidate/config และ validation AP จาก manifest ของโมเดลที่เลือก รวมถึงกรณี LightGBM
+คะแนนและ feature snapshots ของ release เดิมห้ามเปลี่ยน; exact replay ผ่าน แต่ payload
+ที่ขัดกันต้อง rollback และคง active release ก่อนหน้า
+
+หน้าแรกเป็น System dashboard แล้ว โดยแสดงผัง source → features → selected model → scores
+→ API พร้อม source/label provenance, checksum และประวัติ stage จริง แยกเวลาเช็คสถานะออก
+จาก historical cutoff และ source watermark ข้อมูลในเครื่องยังเป็น synthetic ทั้งหมด
+ส่วน GCP กับ authentication แสดงตามสถานะที่ยังไม่ตั้งค่า
+
+พบจาก review ว่าถ้า Compose รอ `/ready` ก่อนเปิดเว็บ ผู้ใช้จะดูรันแรกที่ล้มเหลวไม่ได้
+จึงเปลี่ยน healthcheck ให้ดู liveness และ System status ส่วน `/ready` ยังคุมว่าคะแนนพร้อม
+อ่านหรือไม่ ทดลอง volume ว่างแล้ว web/API healthy, failed intake มองเห็นได้และ readiness
+เป็น 503 จากนั้น pipeline สำเร็จ 650 คะแนนและ readiness เป็น 200 โดย failure เดิมยังอยู่
+source generation/intake บันทึกผลหลัง output/validation; model success commit พร้อม scores
+ใน transaction เดียว เป็นคนละขอบเขต commit ที่ต้องอธิบายให้ชัด
+
+ผลรอบสุดท้าย: local smoke ผ่าน 111 tests, browser ผ่าน 20 tests รวม Axe และ mobile,
+production build/typecheck/lint ผ่าน และ pip-audit/npm audit ไม่พบช่องโหว่ที่รู้จัก
+เก็บภาพหน้า System และหลักฐานจริงไว้ใน
+`docs/evidence/SYSTEM_WORKSPACE_2026-11-07.md` งานนี้ติดตามด้วย issue #16 และยังต้อง human
+review ก่อน merge; source rights/cloud release gates ยังเปิดอยู่

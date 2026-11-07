@@ -22,6 +22,7 @@ from .data import (
     ingest_snapshots,
     sha256_file,
 )
+from .runs import tracked_run
 from .storage import publish
 from .training import train_selected
 
@@ -38,13 +39,14 @@ def run_pipeline(
     root: Path, customers: int = 650, seed: int = SEED, as_of: date = DEFAULT_AS_OF
 ) -> dict:
     root = root.resolve()
-    staging_root = root / "data" / "staging"
-    staging_root.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=staging_root) as staging:
-        source = Path(staging) / "snapshots.csv"
-        generate_snapshots(source, customers, seed)
-        records, source_manifest = ingest_snapshots(source, root, as_of)
-    return fit_and_publish(root, records, source_manifest, seed, as_of)
+    with tracked_run(root, "snapshots") as run_id:
+        staging_root = root / "data" / "staging"
+        staging_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=staging_root) as staging:
+            source = Path(staging) / "snapshots.csv"
+            generate_snapshots(source, customers, seed)
+            records, source_manifest = ingest_snapshots(source, root, as_of)
+        return fit_and_publish(root, records, source_manifest, seed, as_of, run_id=run_id)
 
 
 def run_event_pipeline(
@@ -53,8 +55,9 @@ def run_event_pipeline(
     from .events import prepare_event_dataset
 
     root = root.resolve()
-    records, source = prepare_event_dataset(root, customers, seed, as_of)
-    return fit_and_publish(root, records, source, seed, as_of)
+    with tracked_run(root, "events") as run_id:
+        records, source = prepare_event_dataset(root, customers, seed, as_of)
+        return fit_and_publish(root, records, source, seed, as_of, run_id=run_id)
 
 
 def run_event_source_pipeline(
@@ -64,11 +67,14 @@ def run_event_source_pipeline(
     from .events import prepare_features_from_release
 
     root = root.resolve()
-    records, source = prepare_features_from_release(root, source_release_id, as_of)
-    return fit_and_publish(root, records, source, seed, as_of)
+    with tracked_run(root, "event-source") as run_id:
+        records, source = prepare_features_from_release(root, source_release_id, as_of)
+        return fit_and_publish(root, records, source, seed, as_of, run_id=run_id)
 
 
-def fit_and_publish(root: Path, records: list, source_manifest: dict, seed: int, as_of: date):
+def fit_and_publish(
+    root: Path, records: list, source_manifest: dict, seed: int, as_of: date, run_id=None
+):
     model, protocol, test, probabilities = train_selected(records, seed)
     selection = protocol["selection"]
     packages = {
@@ -158,5 +164,5 @@ def fit_and_publish(root: Path, records: list, source_manifest: dict, seed: int,
         (version, r.customer_id, str(r.as_of_date), float(p))
         for r, p in zip(test, probabilities, strict=True)
     ]
-    publish(root, manifest, scores)
+    publish(root, manifest, scores, snapshots=records, run_id=run_id)
     return manifest
