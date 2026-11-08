@@ -12,6 +12,8 @@ that cutoff. Churn means no renewal event for that opportunity in the inclusive 
 interval. Labels use the latest revisions available at freeze; a late outcome correction
 that adds, removes or changes a qualifying renewal advances label availability. It cannot
 silently enter an earlier training cohort.
+The declared completeness watermark must cover the evaluation freeze itself; a mature
+horizon alone cannot establish whether later corrections were available at freeze.
 This is a project-defined simulation, not the unverified KKBox competition definition.
 Repeated monthly opportunities can represent reactivation; it is not a survival cohort.
 

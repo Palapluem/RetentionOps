@@ -32,6 +32,15 @@ def main() -> None:
             if args.output is None:
                 parser.error("generate-events requires --output")
             with tracked_run(root, "source-generation") as run_id:
+                destination = args.output.expanduser().resolve()
+                reserved = [
+                    root / "artifacts",
+                    *(root / "data" / name for name in ("events", "features", "raw", "staging")),
+                ]
+                if any(destination.is_relative_to(directory.resolve()) for directory in reserved):
+                    raise ValueError(
+                        "Output cannot be placed in managed artifacts or data releases"
+                    )
                 rows = generate_events(args.output, args.customers, args.seed)
                 result = {
                     "output": str(args.output),

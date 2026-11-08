@@ -140,7 +140,18 @@ def risk_band(probability):
     return "high" if probability >= 0.4 else "watch" if probability >= 0.2 else "low"
 
 
+def validate_score_cutoff(conn, manifest):
+    """Reject a release if any persisted score belongs to another cutoff."""
+    mismatch = conn.execute(
+        "SELECT 1 FROM predictions WHERE model_version=? AND as_of_date<>? LIMIT 1",
+        (manifest["model_version"], manifest["score_cutoff"]),
+    ).fetchone()
+    if mismatch is not None:
+        raise ValueError("Score release/cutoff mismatch")
+
+
 def overview(conn, manifest):
+    validate_score_cutoff(conn, manifest)
     metrics = manifest["metrics"]["test"]
     values = (
         metrics["selected_model"] if "selected_model" in metrics else metrics["logistic_regression"]
@@ -172,8 +183,9 @@ def overview(conn, manifest):
 
 
 def risk(conn, manifest, limit=20, offset=0, search="", band="all", auto_renew=None):
-    clauses = ["p.model_version=?"]
-    params = [manifest["model_version"]]
+    validate_score_cutoff(conn, manifest)
+    clauses = ["p.model_version=?", "p.as_of_date=?"]
+    params = [manifest["model_version"], manifest["score_cutoff"]]
     if search:
         clauses.append("p.customer_id LIKE ?")
         params.append(f"%{search}%")
@@ -307,11 +319,13 @@ def customer(conn, customer_id, version=None):
         if prior is None:
             raise HTTPException(404, "Model release not found")
         manifest = json.loads(prior[0])
+    validate_score_cutoff(conn, manifest)
     row = conn.execute(
         "SELECT p.*,f.snapshot FROM predictions p JOIN feature_snapshots f "
         "ON p.model_version=f.model_version AND p.customer_id=f.customer_id "
-        "AND p.as_of_date=f.as_of_date WHERE p.model_version=? AND p.customer_id=?",
-        (manifest["model_version"], customer_id),
+        "AND p.as_of_date=f.as_of_date WHERE p.model_version=? AND p.customer_id=? "
+        "AND p.as_of_date=?",
+        (manifest["model_version"], customer_id, manifest["score_cutoff"]),
     ).fetchone()
     if row is None:
         raise HTTPException(404, "Customer not in this scored cohort")

@@ -25,6 +25,7 @@
 | 2026-11-07 | Encode risk search, filters and pagination in the URL | Preserve review state across refresh, shared links and browser history while retaining bounded API filters |
 | 2026-11-07 | Record source generation/intake completion after output or validation | Keep filesystem and run-history commit boundaries explicit; source rows count event revisions, model rows count scored customers, and model success remains atomic with publication |
 | 2026-11-07 | Use liveness checks to start the local API and web without a publication | Compose checks `/health` and same-origin System status so empty/first-failed state remains visible; `/ready` independently gates score readiness |
+| 2026-11-08 | Fail closed on source-freeze, output collision and score-cutoff inconsistencies | Require completeness through evaluation freeze; protect immutable outputs and verify every score belongs to its manifest cutoff before serving |
 
 Revisit a decision when measured evidence changes its assumptions. Record that evidence and
 the relevant issue/PR; do not silently expand infrastructure or label semantics.

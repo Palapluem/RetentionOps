@@ -5,9 +5,11 @@ from __future__ import annotations
 import csv
 import json
 import math
+import os
 import random
 import re
 import shutil
+import stat
 import tempfile
 from collections import defaultdict
 from datetime import date, timedelta
@@ -264,6 +266,8 @@ def build_features(
     cutoffs: tuple[date, ...] = CUTOFFS,
 ) -> tuple[list[Snapshot], dict]:
     validate_events(events, complete_through)
+    if freeze > complete_through:
+        raise ValueError("Source completeness watermark must cover the evaluation freeze")
     if max(cutoffs) + timedelta(days=LABEL_HORIZON_DAYS) > min(freeze, complete_through):
         raise ValueError("Immature label horizon or incomplete source coverage")
     by_customer = defaultdict(list)
@@ -418,10 +422,33 @@ def generate_events(path: Path, customers: int = 650, seed: int = SEED) -> int:
                         expiry_date=cutoff,
                     )
                 )
+    path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        for event in sorted(events, key=lambda e: (e.customer_id, e.occurred_at, e.event_id)):
-            handle.write(event.model_dump_json() + "\n")
+    # Stage beside the destination, then atomically link without replacing an owner file.
+    # Exact replay is allowed only for regular files, never for symlinks.
+    with tempfile.TemporaryDirectory(dir=path.parent, prefix=".events-staging-") as staging:
+        staged = Path(staging) / "events.jsonl"
+        with staged.open("w", encoding="utf-8") as handle:
+            for event in sorted(events, key=lambda e: (e.customer_id, e.occurred_at, e.event_id)):
+                handle.write(event.model_dump_json() + "\n")
+        try:
+            os.link(staged, path, follow_symlinks=False)
+        except FileExistsError:
+            try:
+                fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            except OSError as exc:
+                raise ValueError("Output already exists or is a symlink") from exc
+            with os.fdopen(fd, "rb") as existing, staged.open("rb") as expected:
+                if not stat.S_ISREG(os.fstat(existing.fileno()).st_mode):
+                    raise ValueError("Output must be a regular file") from None
+                while True:
+                    existing_chunk = existing.read(1024 * 1024)
+                    if existing_chunk != expected.read(1024 * 1024):
+                        raise ValueError(
+                            "Refusing to overwrite a different existing output"
+                        ) from None
+                    if not existing_chunk:
+                        break
     return len(events)
 
 
