@@ -56,6 +56,9 @@ Source-stage success is recorded after file output or intake validation/publicat
 Filesystem output and the run-history database have separate commit boundaries; an existing
 source output does not prove that its attempt status was persisted. Source stages leave the
 active model release unchanged.
+Generation creates an output without replacing an existing file: exact-byte replay of an
+ordinary file is accepted, while different bytes, symlinks and managed release locations are
+rejected. Choose a new incoming filename for a different generated source.
 
 To avoid overwriting an earlier experiment, pass `--root` and matching `RETENTIONOPS_ROOT`.
 Do not load joblib files from an untrusted source; they are executable serialization. The
@@ -87,6 +90,9 @@ revision**. This retains the original manifest and reactivates that model. Acros
 changes, use the earlier reviewed commit and locked environment in a separate root; verify
 its model/data hashes before switching the API root and restarting. Do not update an active
 pointer alone or claim a cloud rollback drill has passed.
+The synthetic integration test `tests/test_recovery_drill.py` exercises event releases A → B,
+a failed source run that preserves B, and replay of A, checking API results, scores,
+features, artifact verification and run history in a temporary local root.
 
 ## Docker
 

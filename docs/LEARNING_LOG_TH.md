@@ -257,3 +257,14 @@ production build/typecheck/lint ผ่าน และ pip-audit/npm audit ไ�
 เก็บภาพหน้า System และหลักฐานจริงไว้ใน
 `docs/evidence/SYSTEM_WORKSPACE_2026-11-07.md` งานนี้ติดตามด้วย issue #16 และยังต้อง human
 review ก่อน merge; source rights/cloud release gates ยังเปิดอยู่
+# 2026-11-08 — ป้องกันข้อมูลเผยแพร่เสียและซ้อมกู้ระบบในเครื่อง
+
+ตรวจขอบเขตที่ชุดทดสอบเดิมยังไม่ครอบคลุม: การสร้าง source ห้ามเขียนทับไฟล์เดิมหรือ
+release ที่จัดเก็บไว้, วัน completeness ต้องครอบคลุม evaluation freeze และคะแนนทุกแถว
+ต้องตรง cutoff ของ manifest ก่อน API ให้บริการ เมื่อข้อมูลไม่สอดคล้องระบบต้องปฏิเสธ
+แทนการแสดงผลที่คลาดเคลื่อน
+
+ซ้อมด้วยข้อมูล synthetic จาก release A ไป B จากนั้นจำลอง source ผิดพลาดและตรวจว่า B
+ยังให้บริการ ก่อน replay กลับ A พร้อมตรวจคะแนน features, API และประวัติการรัน รายละเอียด
+และขอบเขตอยู่ใน `docs/evidence/PUBLICATION_INTEGRITY_2026-11-08.md` การทดสอบนี้ยังไม่ใช่
+การกู้คืน GCP หรือการยืนยันผลกับข้อมูลลูกค้าจริง
