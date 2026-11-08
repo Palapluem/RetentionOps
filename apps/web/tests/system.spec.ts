@@ -78,6 +78,47 @@ test("system displays a first failed attempt before any publication", async ({ p
   await expect(page.getByText("No active scored source", { exact: true })).toBeVisible();
 });
 
+test("a mocked running attempt is presented as a recorded state on both views", async ({
+  page,
+  request,
+}) => {
+  const actualSystem = await (await request.get("/api/retention/system-status")).json();
+  const actualWorkspace = await (
+    await request.get("/api/retention/workspace?limit=12&offset=0")
+  ).json();
+  const running = {
+    run_id: "mocked-unconfirmed-attempt",
+    mode: "events",
+    state: "running",
+    started_at: actualSystem.observed_at,
+    finished_at: null,
+    model_version: null,
+    output_rows: null,
+    elapsed_seconds: null,
+    error_type: null,
+  };
+  await page.route("**/api/retention/system-status", (route) =>
+    route.fulfill({ json: { ...actualSystem, runs: [running] } }),
+  );
+  await page.route("**/api/retention/workspace*", (route) =>
+    route.fulfill({
+      json: { ...actualWorkspace, status: { ...actualWorkspace.status, runs: [running] } },
+    }),
+  );
+
+  for (const [path, label] of [
+    ["/", "System pipeline attempts"],
+    ["/status", "Pipeline run history"],
+  ]) {
+    await page.goto(path);
+    const history = page.getByRole("region", { name: label });
+    await expect(history).toContainText("running (last recorded)");
+    await expect(history).toContainText("Not recorded");
+    await expect(history).not.toContainText("In progress");
+    await expect(page.getByText(/does not confirm that the process is still active/)).toBeVisible();
+  }
+});
+
 test("system error can be retried against the actual API", async ({ page }) => {
   await page.route("**/api/retention/system-status", (route) =>
     route.fulfill({

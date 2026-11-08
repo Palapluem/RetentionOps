@@ -58,7 +58,9 @@ source output does not prove that its attempt status was persisted. Source stage
 active model release unchanged.
 Generation creates an output without replacing an existing file: exact-byte replay of an
 ordinary file is accepted, while different bytes, symlinks and managed release locations are
-rejected. Choose a new incoming filename for a different generated source.
+rejected. A leading `~` is expanded consistently for validation and writing; the final
+output path itself must not be a symlink. Choose a new incoming filename for a different
+generated source.
 
 To avoid overwriting an earlier experiment, pass `--root` and matching `RETENTIONOPS_ROOT`.
 Do not load joblib files from an untrusted source; they are executable serialization. The
@@ -139,8 +141,11 @@ generated `events` from `events`, and ingested `event-source` from `run-events`.
 Model success commits with features, scores and the active pointer; failed attempts retain
 the last valid result. The run table's Output rows counts event revisions for source stages
 and scored customers for model stages.
-Process termination can leave a running attempt: inspect the actual process and
-replay manually; automatic stale-job reconciliation/cloud orchestration is not implemented.
+Caught Python interruptions are recorded as failed attempts with their error type when the
+attempt is still running; an already committed success is not changed. A process killed
+without Python cleanup, or a host failure, can leave `running` as the last recorded state.
+This state alone does not establish whether the process is alive. Inspect the actual process
+before replaying; automatic stale-job reconciliation/cloud orchestration is not implemented.
 A replay records a new attempt but retains the immutable model training timestamp.
 
 Data & model status reports the selected family, candidate, parameters and recorded validation AP,

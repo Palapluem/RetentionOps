@@ -32,7 +32,8 @@ def main() -> None:
             if args.output is None:
                 parser.error("generate-events requires --output")
             with tracked_run(root, "source-generation") as run_id:
-                destination = args.output.expanduser().resolve()
+                output = args.output.expanduser()
+                destination = output.resolve()
                 reserved = [
                     root / "artifacts",
                     *(root / "data" / name for name in ("events", "features", "raw", "staging")),
@@ -41,11 +42,11 @@ def main() -> None:
                     raise ValueError(
                         "Output cannot be placed in managed artifacts or data releases"
                     )
-                rows = generate_events(args.output, args.customers, args.seed)
+                rows = generate_events(output, args.customers, args.seed)
                 result = {
-                    "output": str(args.output),
+                    "output": str(output),
                     "rows": rows,
-                    "sha256": sha256_file(args.output),
+                    "sha256": sha256_file(output),
                 }
                 complete_source_stage(root, run_id, rows)
         elif args.command == "ingest-events":

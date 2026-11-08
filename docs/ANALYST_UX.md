@@ -49,6 +49,8 @@ checksums. The attempt table covers source generation/intake and model runs; Out
 counts event revisions for source stages and scored customers for model stages. A successful
 source attempt leaves model publication unchanged. Liveness-based service startup keeps
 empty or first-failed System state accessible before score readiness is available.
+An attempt recorded as running is shown as the last recorded state, not as proof that the
+process is still alive; interrupted attempts that Python catches report their error type.
 
 Next.js handles a single same-origin read proxy with a fixed backend and allowlisted paths;
 FastAPI validates inputs and response models. Types are generated from exported OpenAPI.
