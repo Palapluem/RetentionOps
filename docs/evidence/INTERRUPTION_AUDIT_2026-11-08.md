@@ -20,8 +20,8 @@ an existing database only; if startup or failure reporting cannot access it, the
 exception is still propagated.
 
 Verification: an isolated local smoke run passed Ruff, 152 Python tests, synthetic snapshot
-and event CLI paths, and repository hygiene. A subsequent failure-report path-error case
-passed in the 14-test interruption suite. Frontend lint, typecheck, production build and 21
+and event CLI paths, and repository hygiene. Subsequent failure-report path and symlink-loop
+cases passed in the 15-test interruption suite. Frontend lint, typecheck, production build and 21
 Chromium tests passed in a temporary copy; the running-state browser
 fixture is explicitly mocked. GitHub CI results are recorded in the PR. Existing
 Starlette/httpx deprecation warning remains.

@@ -54,6 +54,32 @@ def test_failure_report_path_error_does_not_mask_original_error(tmp_path, monkey
     assert raised.value is failure
 
 
+def test_symlink_loop_during_failure_reporting_preserves_original_error(tmp_path, monkeypatch):
+    root = tmp_path / "workspace"
+    artifacts = root / "artifacts"
+    artifacts.mkdir(parents=True)
+    database = artifacts / "serving.sqlite"
+    database.symlink_to("serving.sqlite")
+    original_connect = sqlite3.connect
+    failures = []
+
+    def observe_connect(*args, **kwargs):
+        try:
+            return original_connect(*args, **kwargs)
+        except sqlite3.OperationalError as exc:
+            failures.append(exc)
+            raise
+
+    monkeypatch.setattr(sqlite3, "connect", observe_connect)
+    with pytest.raises(sqlite3.OperationalError) as raised:
+        with tracked_run(root, "events"):
+            pytest.fail("an attempt cannot start with a cyclic database symlink")
+    assert failures
+    assert raised.value is failures[0]
+    assert database.is_symlink()
+    assert database.readlink() == Path("serving.sqlite")
+
+
 @pytest.mark.parametrize("exception_type", [KeyboardInterrupt, SystemExit])
 @pytest.mark.parametrize("phase", ["before_commit", "after_commit"])
 def test_interruption_during_attempt_creation_preserves_publication(

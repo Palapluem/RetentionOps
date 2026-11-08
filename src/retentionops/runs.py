@@ -62,6 +62,6 @@ def tracked_run(root, mode):
                         run_id,
                     ),
                 )
-        except (OSError, sqlite3.Error):
+        except (OSError, RuntimeError, sqlite3.Error):
             logging.exception("Could not persist failed job status")
         raise
