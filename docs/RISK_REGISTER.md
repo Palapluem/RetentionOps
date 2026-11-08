@@ -12,4 +12,5 @@
 | Cost growth | No cloud resources created | Budget alerts, query bounds, instance/job limits and reviewed cleanup plan |
 | Repo governance | Admin permission verified; main initially unprotected | PR/CI workflow first; human review and branch-rule/board follow-up |
 | Local scale | In-memory CSV and single writer | Introduce Polars/PyArrow/warehouse jobs at measured need; no throughput claims |
+| Interrupted local job | Uncatchable termination can leave the last recorded state as running | Inspect the process before replay; design and test a lease/heartbeat before automated reconciliation |
 | Release overclaim | Cloud/UI/real-data gates incomplete | No v0.1.0 tag until release checklist has direct evidence |

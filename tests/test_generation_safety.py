@@ -1,10 +1,13 @@
+import json
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from retentionops.api import create_app
+from retentionops.cli import main
 from retentionops.data import DEFAULT_AS_OF
 from retentionops.events import Event, generate_events, ingest_event_source
 from retentionops.pipeline import run_pipeline
@@ -99,6 +102,72 @@ def test_generation_does_not_follow_output_symlinks(tmp_path, target_exists):
         assert target.read_bytes() == b"owner data\n"
     else:
         assert not target.exists()
+
+
+def test_quoted_tilde_is_expanded_for_the_written_output(tmp_path, monkeypatch, capsys):
+    root = tmp_path / "workspace"
+    managed = root / "artifacts"
+    managed.mkdir(parents=True)
+    example_home = tmp_path / "example-home"
+    example_home.mkdir()
+    original_expanduser = Path.expanduser
+
+    def expand_test_home(path):
+        if path.parts and path.parts[0] == "~":
+            return example_home.joinpath(*path.parts[1:])
+        return original_expanduser(path)
+
+    monkeypatch.setattr(Path, "expanduser", expand_test_home)
+    monkeypatch.chdir(managed)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "retentionops",
+            "generate-events",
+            "--root",
+            str(root),
+            "--output",
+            "~/events.jsonl",
+            "--customers",
+            "50",
+        ],
+    )
+
+    main()
+
+    report = json.loads(capsys.readouterr().out)
+    assert report["output"] == str(example_home / "events.jsonl")
+    assert (example_home / "events.jsonl").is_file()
+    assert not (managed / "~" / "events.jsonl").exists()
+
+
+@pytest.mark.parametrize("managed_location", ["artifacts", "data/events"])
+def test_generation_rejects_symlinked_managed_directory(tmp_path, managed_location):
+    root = tmp_path / "workspace"
+    managed = root / managed_location
+    managed.mkdir(parents=True)
+    alias = root / "alias"
+    alias.symlink_to(managed, target_is_directory=True)
+
+    result = cli_generate(root, alias / "unexpected.jsonl")
+
+    assert result.returncode != 0
+    assert not (managed / "unexpected.jsonl").exists()
+
+
+def test_generation_rejects_symlink_even_when_target_has_identical_bytes(tmp_path):
+    target = tmp_path / "generated.jsonl"
+    generate_events(target, customers=50)
+    original = target.read_bytes()
+    link = tmp_path / "link.jsonl"
+    link.symlink_to(target)
+
+    result = cli_generate(tmp_path / "workspace", link)
+
+    assert result.returncode != 0
+    assert link.is_symlink()
+    assert target.read_bytes() == original
 
 
 def test_exact_generation_replay_to_ordinary_output_is_idempotent(tmp_path):

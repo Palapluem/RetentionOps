@@ -45,7 +45,7 @@ def tracked_run(root, mode):
         )
     try:
         yield run_id
-    except Exception as exc:
+    except (Exception, KeyboardInterrupt, SystemExit) as exc:
         finished = datetime.now(UTC)
         try:
             with sqlite3.connect(path, timeout=30) as conn:

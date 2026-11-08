@@ -607,42 +607,50 @@ export function RunHistoryTable({
 }) {
   if (!runs.length) return <p>{emptyMessage}</p>;
   return (
-    <ScrollArea label={label}>
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Started</th>
-            <th scope="col">Pipeline</th>
-            <th scope="col">State</th>
-            <th scope="col">Output rows</th>
-            <th scope="col">Duration</th>
-            <th scope="col">Error type</th>
-          </tr>
-        </thead>
-        <tbody>
-          {runs.map((run) => (
-            <tr key={run.run_id}>
-              <td>{timestamp(run.started_at)}</td>
-              <td>{runNames[run.mode] || run.mode}</td>
-              <td>
-                <span
-                  className={`badge ${run.state === "succeeded" ? "low" : run.state === "failed" ? "high" : "watch"}`}
-                >
-                  {run.state}
-                </span>
-              </td>
-              <td>{run.output_rows === null ? "—" : number(run.output_rows)}</td>
-              <td>
-                {run.elapsed_seconds === null
-                  ? "In progress"
-                  : `${run.elapsed_seconds.toFixed(2)}s`}
-              </td>
-              <td>{run.error_type || "—"}</td>
+    <>
+      <ScrollArea label={label}>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Started</th>
+              <th scope="col">Pipeline</th>
+              <th scope="col">State</th>
+              <th scope="col">Output rows</th>
+              <th scope="col">Duration</th>
+              <th scope="col">Error type</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollArea>
+          </thead>
+          <tbody>
+            {runs.map((run) => (
+              <tr key={run.run_id}>
+                <td>{timestamp(run.started_at)}</td>
+                <td>{runNames[run.mode] || run.mode}</td>
+                <td>
+                  <span
+                    className={`badge ${run.state === "succeeded" ? "low" : run.state === "failed" ? "high" : "watch"}`}
+                  >
+                    {run.state === "running" ? "running (last recorded)" : run.state}
+                  </span>
+                </td>
+                <td>{run.output_rows === null ? "—" : number(run.output_rows)}</td>
+                <td>
+                  {run.elapsed_seconds === null
+                    ? "Not recorded"
+                    : `${run.elapsed_seconds.toFixed(2)}s`}
+                </td>
+                <td>{run.error_type || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </ScrollArea>
+      {runs.some((run) => run.state === "running") && (
+        <p className="caption">
+          A running state is the last recorded state; it does not confirm that the process is still
+          active. Check the process before retrying.
+        </p>
+      )}
+    </>
   );
 }
 

@@ -159,8 +159,8 @@ def overview(conn, manifest):
     aggregate = conn.execute(
         "SELECT COUNT(*), AVG(churn_probability), SUM(churn_probability >= 0.4) "
         "FROM predictions JOIN feature_snapshots USING(model_version,customer_id,as_of_date) "
-        "WHERE model_version=?",
-        (manifest["model_version"],),
+        "WHERE model_version=? AND as_of_date=?",
+        (manifest["model_version"], manifest["score_cutoff"]),
     ).fetchone()
     if aggregate[0] != values["rows"]:
         raise ValueError("Publication reconciliation failed")
