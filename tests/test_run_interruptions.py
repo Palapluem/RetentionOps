@@ -5,12 +5,105 @@ import signal
 import sqlite3
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from retentionops import cli, pipeline, storage
 from retentionops.api import create_app
+from retentionops.runs import tracked_run
+
+
+def test_failed_directory_creation_does_not_create_database(tmp_path, monkeypatch):
+    root = tmp_path / "workspace"
+    root.mkdir()
+    (root / "artifacts").mkdir()
+    original_mkdir = Path.mkdir
+    failure = PermissionError("injected directory creation failure")
+
+    def fail_artifacts_directory(path, *args, **kwargs):
+        if path == root / "artifacts":
+            raise failure
+        return original_mkdir(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "mkdir", fail_artifacts_directory)
+    with pytest.raises(PermissionError) as raised:
+        with tracked_run(root, "events"):
+            pytest.fail("an attempt cannot start without its artifact directory")
+    assert raised.value is failure
+    assert not (root / "artifacts" / "serving.sqlite").exists()
+
+
+def test_failure_report_path_error_does_not_mask_original_error(tmp_path, monkeypatch):
+    root = tmp_path / "workspace"
+    root.mkdir()
+    failure = PermissionError("original startup failure")
+
+    def fail_mkdir(*args, **kwargs):
+        raise failure
+
+    def fail_resolve(*args, **kwargs):
+        raise OSError("failure-report path unavailable")
+
+    monkeypatch.setattr(Path, "mkdir", fail_mkdir)
+    monkeypatch.setattr(Path, "resolve", fail_resolve)
+    with pytest.raises(PermissionError) as raised:
+        with tracked_run(root, "events"):
+            pytest.fail("an attempt cannot start without its artifact directory")
+    assert raised.value is failure
+
+
+@pytest.mark.parametrize("exception_type", [KeyboardInterrupt, SystemExit])
+@pytest.mark.parametrize("phase", ["before_commit", "after_commit"])
+def test_interruption_during_attempt_creation_preserves_publication(
+    publication, monkeypatch, exception_type, phase
+):
+    root, manifest = publication
+    client = TestClient(create_app(root))
+    before_risk = client.get("/api/v1/risk?limit=5").json()
+    before_runs = client.get("/api/v1/system-status").json()["runs"]
+    interruption = exception_type("during attempt creation")
+    original_connect = sqlite3.connect
+    first_connection = True
+
+    class InterruptedConnection(sqlite3.Connection):
+        def execute(self, sql, parameters=()):
+            result = super().execute(sql, parameters)
+            if phase == "before_commit" and sql.startswith("INSERT INTO pipeline_runs"):
+                raise interruption
+            return result
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            result = super().__exit__(exc_type, exc_value, traceback)
+            if phase == "after_commit" and exc_type is None:
+                raise interruption
+            return result
+
+    def interrupted_connect(*args, **kwargs):
+        nonlocal first_connection
+        if first_connection:
+            first_connection = False
+            return original_connect(*args, **kwargs, factory=InterruptedConnection)
+        return original_connect(*args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(sqlite3, "connect", interrupted_connect)
+        with pytest.raises(exception_type) as raised:
+            pipeline.run_pipeline(root, customers=100, seed=2)
+    assert raised.value is interruption
+
+    status = client.get("/api/v1/system-status").json()
+    assert client.get("/ready").status_code == 200
+    assert status["active_release"]["model_version"] == manifest["model_version"]
+    assert client.get("/api/v1/risk?limit=5").json() == before_risk
+    if phase == "after_commit":
+        assert status["runs"][0]["state"] == "failed"
+        assert status["runs"][0]["error_type"] == exception_type.__name__
+        assert status["runs"][0]["model_version"] is None
+        assert status["runs"][1:] == before_runs
+    else:
+        assert status["runs"] == before_runs
 
 
 @pytest.mark.parametrize("exception_type", [KeyboardInterrupt, SystemExit])

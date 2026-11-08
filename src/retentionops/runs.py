@@ -34,21 +34,24 @@ def complete_source_stage(root, run_id, output_rows):
 @contextmanager
 def tracked_run(root, mode):
     path = root / "artifacts/serving.sqlite"
-    path.parent.mkdir(parents=True, exist_ok=True)
     run_id = str(uuid4())
     started = datetime.now(UTC)
-    with sqlite3.connect(path, timeout=30) as conn:
-        conn.executescript(SCHEMA)
-        conn.execute(
-            "INSERT INTO pipeline_runs(run_id,mode,state,started_at) VALUES(?,?,'running',?)",
-            (run_id, mode, started.isoformat()),
-        )
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(path, timeout=30) as conn:
+            conn.executescript(SCHEMA)
+            conn.execute(
+                "INSERT INTO pipeline_runs(run_id,mode,state,started_at) VALUES(?,?,'running',?)",
+                (run_id, mode, started.isoformat()),
+            )
         yield run_id
     except (Exception, KeyboardInterrupt, SystemExit) as exc:
         finished = datetime.now(UTC)
         try:
-            with sqlite3.connect(path, timeout=30) as conn:
+            # Failure reporting must never create a new database after startup failed.
+            with sqlite3.connect(
+                path.resolve().as_uri() + "?mode=rw", uri=True, timeout=30
+            ) as conn:
                 conn.execute(
                     "UPDATE pipeline_runs SET state='failed',finished_at=?,error_type=?, "
                     "elapsed_seconds=? WHERE run_id=? AND state='running'",
@@ -59,6 +62,6 @@ def tracked_run(root, mode):
                         run_id,
                     ),
                 )
-        except sqlite3.Error:
+        except (OSError, sqlite3.Error):
             logging.exception("Could not persist failed job status")
         raise
