@@ -104,7 +104,10 @@ def test_local_ai_payload_contains_only_allowlisted_aggregate_facts(publication,
     }
 
 
-def test_local_ai_requires_no_publication_or_external_runtime(publication, monkeypatch):
+@pytest.mark.parametrize("runtime_url", ["https://example.com:11434", "http://ollama:11434"])
+def test_local_ai_requires_no_publication_or_external_runtime(
+    publication, monkeypatch, runtime_url
+):
     root, _ = publication
     called = False
 
@@ -114,7 +117,7 @@ def test_local_ai_requires_no_publication_or_external_runtime(publication, monke
         raise AssertionError("Unsafe runtime must not be called")
 
     monkeypatch.setattr(local_ai, "_request_model", unexpected)
-    monkeypatch.setenv("RETENTIONOPS_OLLAMA_URL", "https://example.com:11434")
+    monkeypatch.setenv("RETENTIONOPS_OLLAMA_URL", runtime_url)
     response = TestClient(create_app(root)).post("/api/v1/insights", headers=INSIGHT_HEADERS)
 
     assert response.status_code == 200

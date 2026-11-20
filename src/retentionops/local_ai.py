@@ -72,7 +72,7 @@ def _base_url_is_local(base_url: str) -> bool:
         parsed = urlsplit(base_url)
         return (
             parsed.scheme == "http"
-            and parsed.hostname in {"127.0.0.1", "localhost", "ollama"}
+            and parsed.hostname in {"127.0.0.1", "localhost"}
             and parsed.port == 11434
             and parsed.username is None
             and parsed.password is None
