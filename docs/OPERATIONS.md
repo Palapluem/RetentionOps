@@ -136,6 +136,46 @@ Run the event pipeline after upgrading; it creates the new feature/run tables du
 writer step. API startup never migrates or writes storage. `/ready` reconciles scored keys
 with feature rows and all cohort counts, not only database existence.
 
+## Optional local AI and data-quality monitoring
+
+The System page's Data quality & model health section is derived from the active immutable
+publication in one read transaction. It reports source type/counts, event watermark status,
+eligible/excluded opportunities where available, mature cohort denominators, score/feature
+reconciliation and selected-model holdout comparisons. A snapshot input has no event
+completeness watermark; the UI labels that as not declared instead of guessing a freshness
+value. The current gate is contract checks, not an invented freshness SLA.
+
+Metric definitions: a cohort's observed churn rate is `mature churned / eligible` for that
+cohort. Test average precision is computed over the scored test rows and shown beside the
+constant-prior reference from the same holdout. Brier is mean squared probability error (lower
+is better). Recall at 10% is `churned rows in the top ceil(10% × test rows) / all churned test
+rows`; it is not a measured campaign conversion rate. The holdout is synthetic and historical.
+
+Local AI is opt-in per button and not a readiness or release dependency. The API accepts no
+prompt/body, requires the fixed internal action header, and the Next.js proxy accepts the
+documented loopback dashboard hosts on ports 3000 and 3100 plus an exact same-origin check.
+It constructs a fixed allowlist of cohort/model aggregates and calls
+Ollama only at `127.0.0.1:11434` for native operation. Proxy variables are bypassed. One
+inference runs at a time with a 10-second cooldown. The standard Compose stack does not connect
+to the host model or store model files in Docker; use the native API/web setup to enable AI.
+Model output must match a JSON schema containing at most two approved
+observation IDs and one approved next-step ID; RetentionOps renders the final text from
+verified release values. Invalid output is dropped. The API does not store or log prompts or
+insight responses, and inference errors do not affect source, score, or dashboard reads.
+
+For native macOS, run Ollama in a separate terminal and install the model once:
+
+```bash
+OLLAMA_NO_CLOUD=1 ollama serve
+ollama pull qwen3:4b-instruct
+```
+
+Then start the API and Next.js app using the native steps in README. Do not change Ollama's host
+binding to `0.0.0.0`. A missing runtime/model, timeout, busy inference slot, cooldown, or invalid
+model response appears as an optional AI status and leaves the regular dashboard usable. Model
+weights stay in Ollama's local model directory and are never copied to Git, Docker contexts,
+images, or volumes.
+
 Source and model stages record actual attempts. Model modes are `snapshots` from `all`,
 generated `events` from `events`, and ingested `event-source` from `run-events`.
 Model success commits with features, scores and the active pointer; failed attempts retain

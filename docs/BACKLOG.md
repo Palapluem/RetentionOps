@@ -14,6 +14,7 @@ evidence, branch and PR before implementation.
 - [Add replayable local event-source ingestion](https://github.com/Palapluem/RetentionOps/issues/10) — [intake PR](https://github.com/Palapluem/RetentionOps/pull/11), separating generation, quality-gated intake and replay.
 - [Add LightGBM candidate comparison and experiment manifest](https://github.com/Palapluem/RetentionOps/issues/14) — [model PR](https://github.com/Palapluem/RetentionOps/pull/15), with validation-only selection and immutable selected-model scores.
 - [Integrate the selected-model API and local system dashboard](https://github.com/Palapluem/RetentionOps/issues/16) — current integration of workspace, source intake and model-publication behavior; combined verification is required.
+- [Add local privacy-bounded AI insights and data-quality monitoring](https://github.com/Palapluem/RetentionOps/issues/22) — ROP-016; aggregate-only System monitoring and optional local Ollama, with mocked-provider CI and no paid/cloud dependency.
 
 The dependency chain starts with foundation → event features → local intake → model selection.
 The workspace branches from event features. Review the combined API, pipeline and storage
@@ -45,6 +46,25 @@ local intake, feature-window and late-arrival tests, local Parquet/source contra
 adapter tests using an explicit fake boundary. Fakes must never be labeled as Google Cloud
 integration evidence.
 Do not let the calendar bypass correctness, rights, privacy or release gates.
+
+## One-week local completion window (Nov 20–26, 2026)
+
+The original Nov 4–13 dates have passed. This catch-up window targets a reviewable local
+synthetic preview; it does not promise a GCP or real-data release while account, source-rights,
+business-label, authentication and ordered human PR-merge gates remain open.
+
+| Day | Focus | Exit evidence |
+|---|---|---|
+| Nov 20 | DA + optional local AI (ROP-016) | Release-backed data-quality/model-health summary; local insight uses only allowlisted aggregates; absent Ollama is non-blocking |
+| Nov 21 | DevOps audit | CI and local/container paths compared; dependency/repository scans and protected-path exclusions recorded |
+| Nov 22 | Pipeline reliability | Clean synthetic source → ingest/replay → selected-model publish → API reads; failure preserves last good release |
+| Nov 23 | Analyst UX | System, cohort and AI opt-in journeys verified at desktop/mobile, including missing-model and empty states |
+| Nov 24 | Security/privacy audit | Prompt/payload boundary, loopback/private service, model output schema and artifact exclusion reviewed |
+| Nov 25 | Clean-checkout verification | Locked install, full smoke, browser tests, audits and repository checks from a clean tree |
+| Nov 26 | Delivery handoff | Evidence/learning log, model/data boundaries, open gates and PR review instructions current; no automatic merge/release |
+
+Cloud resources, source licensing/labels and production auth remain tracked gates; local fake
+or synthetic evidence must not be relabeled as their completion.
 
 November 7–8 are optional buffer days. [The Day 1–4 re-audit](evidence/DAYS1_4_REAUDIT_2026-11-07.md)
 records the local evidence and the remaining cloud/real-source gates.

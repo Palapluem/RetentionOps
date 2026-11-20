@@ -13,4 +13,5 @@
 | Repo governance | Admin permission verified; main initially unprotected | PR/CI workflow first; human review and branch-rule/board follow-up |
 | Local scale | In-memory CSV and single writer | Introduce Polars/PyArrow/warehouse jobs at measured need; no throughput claims |
 | Interrupted local job | Uncatchable termination can leave the last recorded state as running | Inspect the process before replay; design and test a lease/heartbeat before automated reconciliation |
+| Local AI claim/privacy drift | Optional Ollama can still select an unsupported claim if free-form text is accepted | Send aggregate allowlist only; validate enum output; render server-owned observations; test unavailable/invalid response; never pass customer-level data |
 | Release overclaim | Cloud/UI/real-data gates incomplete | No v0.1.0 tag until release checklist has direct evidence |

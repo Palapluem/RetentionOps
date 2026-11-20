@@ -6,6 +6,8 @@ export type Cohort = components["schemas"]["Cohort"];
 export type Customer = components["schemas"]["CustomerDetail"];
 export type JobPage = components["schemas"]["JobPage"];
 export type SystemData = components["schemas"]["SystemStatus"];
+export type DataQualitySummary = components["schemas"]["DataQualitySummary"];
+export type LocalInsight = components["schemas"]["LocalInsight"];
 
 export async function readData<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`/api/retention/${path}`, { signal, cache: "no-store" });
@@ -13,6 +15,20 @@ export async function readData<T>(path: string, signal?: AbortSignal): Promise<T
   if (!response.ok)
     throw new Error(typeof body.detail === "string" ? body.detail : "Check the filters and retry.");
   return body as T;
+}
+
+export async function createLocalInsight(signal?: AbortSignal): Promise<LocalInsight> {
+  const response = await fetch("/api/retention/insights", {
+    method: "POST",
+    signal,
+    cache: "no-store",
+  });
+  const body = await response.json();
+  if (!response.ok)
+    throw new Error(
+      typeof body.detail === "string" ? body.detail : "Local insight is unavailable.",
+    );
+  return body as LocalInsight;
 }
 
 export const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
