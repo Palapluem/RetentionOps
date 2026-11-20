@@ -11,6 +11,53 @@ from retentionops.serving import data_quality
 from retentionops.storage import active_manifest, read_connection
 
 INSIGHT_HEADERS = {"X-RetentionOps-Local-Insight": "generate"}
+AGGREGATE_FACT_FIELDS = {
+    "data_mode",
+    "source_kind",
+    "source_coverage_status",
+    "source_complete_through",
+    "evaluation_freeze",
+    "score_cutoff",
+    "source_rows",
+    "eligible_rows",
+    "excluded_rows",
+    "feature_rows",
+    "scored_rows",
+    "reconciliation_status",
+    "label_maturity_status",
+    "test_cohort_rows",
+    "test_churned",
+    "test_churn_rate",
+    "test_average_precision",
+    "baseline_average_precision",
+    "test_brier",
+    "recall_at_10pct",
+}
+
+
+def _stub_ollama_transport(monkeypatch, response_bytes):
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, size):
+            captured["read_limit"] = size
+            return response_bytes
+
+    class Opener:
+        def open(self, request, timeout):
+            captured["url"] = request.full_url
+            captured["timeout"] = timeout
+            captured["body"] = json.loads(request.data)
+            return Response()
+
+    monkeypatch.setattr(local_ai.urllib.request, "build_opener", lambda *_args: Opener())
+    return captured
 
 
 @pytest.fixture(autouse=True)
@@ -81,28 +128,7 @@ def test_local_ai_payload_contains_only_allowlisted_aggregate_facts(publication,
     assert "private" not in json.dumps(captured["facts"])
     assert "model_version" not in captured["facts"]
     assert "source_release_id" not in captured["facts"]
-    assert set(captured["facts"]) == {
-        "data_mode",
-        "source_kind",
-        "source_coverage_status",
-        "source_complete_through",
-        "evaluation_freeze",
-        "score_cutoff",
-        "source_rows",
-        "eligible_rows",
-        "excluded_rows",
-        "feature_rows",
-        "scored_rows",
-        "reconciliation_status",
-        "label_maturity_status",
-        "test_cohort_rows",
-        "test_churned",
-        "test_churn_rate",
-        "test_average_precision",
-        "baseline_average_precision",
-        "test_brier",
-        "recall_at_10pct",
-    }
+    assert set(captured["facts"]) == AGGREGATE_FACT_FIELDS
 
 
 def test_serialized_local_request_contains_only_aggregate_facts(publication, monkeypatch):
@@ -112,33 +138,14 @@ def test_serialized_local_request_contains_only_aggregate_facts(publication, mon
     facts = local_ai._facts(summary)
     observations = local_ai._observation_ids(summary)
     next_steps = local_ai._next_step_ids(summary)
-    captured = {}
-
-    class Response:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return None
-
-        def read(self, size):
-            assert size == 16_385
-            content = json.dumps(
-                {
-                    "observation_ids": ["test_cohort_mature"],
-                    "next_step": "review_cohort_denominators",
-                }
-            )
-            return json.dumps({"message": {"content": content}}).encode()
-
-    class Opener:
-        def open(self, request, timeout):
-            captured["url"] = request.full_url
-            captured["timeout"] = timeout
-            captured["body"] = json.loads(request.data)
-            return Response()
-
-    monkeypatch.setattr(local_ai.urllib.request, "build_opener", lambda *_args: Opener())
+    content = json.dumps(
+        {
+            "observation_ids": ["test_cohort_mature"],
+            "next_step": "review_cohort_denominators",
+        }
+    )
+    raw_response = json.dumps({"message": {"content": content}}).encode()
+    captured = _stub_ollama_transport(monkeypatch, raw_response)
     selected = local_ai._request_model(
         base_url="http://127.0.0.1:11434",
         model="qwen3:4b-instruct",
@@ -150,31 +157,11 @@ def test_serialized_local_request_contains_only_aggregate_facts(publication, mon
     sent = json.loads(captured["body"]["messages"][1]["content"])
     assert captured["url"] == "http://127.0.0.1:11434/api/chat"
     assert captured["timeout"] == 45
+    assert captured["read_limit"] == 16_385
     assert captured["body"]["stream"] is False
     assert captured["body"]["format"]["additionalProperties"] is False
     assert sent["aggregate_facts"] == facts
-    assert set(sent["aggregate_facts"]) == {
-        "data_mode",
-        "source_kind",
-        "source_coverage_status",
-        "source_complete_through",
-        "evaluation_freeze",
-        "score_cutoff",
-        "source_rows",
-        "eligible_rows",
-        "excluded_rows",
-        "feature_rows",
-        "scored_rows",
-        "reconciliation_status",
-        "label_maturity_status",
-        "test_cohort_rows",
-        "test_churned",
-        "test_churn_rate",
-        "test_average_precision",
-        "baseline_average_precision",
-        "test_brier",
-        "recall_at_10pct",
-    }
+    assert set(sent["aggregate_facts"]) == AGGREGATE_FACT_FIELDS
     assert "customer_id" not in captured["body"]["messages"][1]["content"]
     assert "SYN-" not in captured["body"]["messages"][1]["content"]
     assert selected["observation_ids"] == ["test_cohort_mature"]
@@ -212,22 +199,7 @@ def test_local_insight_rejects_malformed_or_oversized_runtime_response(
 ):
     root, _ = publication
 
-    class Response:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return None
-
-        def read(self, _size):
-            return raw
-
-    class Opener:
-        def open(self, _request, timeout):
-            assert timeout == 45
-            return Response()
-
-    monkeypatch.setattr(local_ai.urllib.request, "build_opener", lambda *_args: Opener())
+    _stub_ollama_transport(monkeypatch, raw)
     response = TestClient(create_app(root)).post("/api/v1/insights", headers=INSIGHT_HEADERS)
 
     assert response.status_code == 200
