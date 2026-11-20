@@ -1,4 +1,5 @@
 import json
+from urllib.error import HTTPError, URLError
 
 import pytest
 from fastapi.testclient import TestClient
@@ -102,6 +103,136 @@ def test_local_ai_payload_contains_only_allowlisted_aggregate_facts(publication,
         "test_brier",
         "recall_at_10pct",
     }
+
+
+def test_serialized_local_request_contains_only_aggregate_facts(publication, monkeypatch):
+    root, _ = publication
+    with read_connection(root) as conn:
+        summary = data_quality(conn, active_manifest(conn))
+    facts = local_ai._facts(summary)
+    observations = local_ai._observation_ids(summary)
+    next_steps = local_ai._next_step_ids(summary)
+    captured = {}
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, size):
+            assert size == 16_385
+            content = json.dumps(
+                {
+                    "observation_ids": ["test_cohort_mature"],
+                    "next_step": "review_cohort_denominators",
+                }
+            )
+            return json.dumps({"message": {"content": content}}).encode()
+
+    class Opener:
+        def open(self, request, timeout):
+            captured["url"] = request.full_url
+            captured["timeout"] = timeout
+            captured["body"] = json.loads(request.data)
+            return Response()
+
+    monkeypatch.setattr(local_ai.urllib.request, "build_opener", lambda *_args: Opener())
+    selected = local_ai._request_model(
+        base_url="http://127.0.0.1:11434",
+        model="qwen3:4b-instruct",
+        facts=facts,
+        observations=observations,
+        next_steps=next_steps,
+    )
+
+    sent = json.loads(captured["body"]["messages"][1]["content"])
+    assert captured["url"] == "http://127.0.0.1:11434/api/chat"
+    assert captured["timeout"] == 45
+    assert captured["body"]["stream"] is False
+    assert captured["body"]["format"]["additionalProperties"] is False
+    assert sent["aggregate_facts"] == facts
+    assert set(sent["aggregate_facts"]) == {
+        "data_mode",
+        "source_kind",
+        "source_coverage_status",
+        "source_complete_through",
+        "evaluation_freeze",
+        "score_cutoff",
+        "source_rows",
+        "eligible_rows",
+        "excluded_rows",
+        "feature_rows",
+        "scored_rows",
+        "reconciliation_status",
+        "label_maturity_status",
+        "test_cohort_rows",
+        "test_churned",
+        "test_churn_rate",
+        "test_average_precision",
+        "baseline_average_precision",
+        "test_brier",
+        "recall_at_10pct",
+    }
+    assert "customer_id" not in captured["body"]["messages"][1]["content"]
+    assert "SYN-" not in captured["body"]["messages"][1]["content"]
+    assert selected["observation_ids"] == ["test_cohort_mature"]
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_reason"),
+    [
+        (URLError("connection refused"), "runtime_unavailable"),
+        (
+            HTTPError("http://127.0.0.1:11434/api/chat", 404, "missing", {}, None),
+            "model_not_installed",
+        ),
+        (TimeoutError(), "timeout"),
+        (ValueError("invalid model response"), "invalid_response"),
+    ],
+)
+def test_local_insight_maps_runtime_failures(publication, monkeypatch, error, expected_reason):
+    root, _ = publication
+
+    def fail(**_kwargs):
+        raise error
+
+    monkeypatch.setattr(local_ai, "_request_model", fail)
+    response = TestClient(create_app(root)).post("/api/v1/insights", headers=INSIGHT_HEADERS)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "unavailable"
+    assert response.json()["reason"] == expected_reason
+
+
+@pytest.mark.parametrize("raw", [b"not-json", b"x" * 16_385])
+def test_local_insight_rejects_malformed_or_oversized_runtime_response(
+    publication, monkeypatch, raw
+):
+    root, _ = publication
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, _size):
+            return raw
+
+    class Opener:
+        def open(self, _request, timeout):
+            assert timeout == 45
+            return Response()
+
+    monkeypatch.setattr(local_ai.urllib.request, "build_opener", lambda *_args: Opener())
+    response = TestClient(create_app(root)).post("/api/v1/insights", headers=INSIGHT_HEADERS)
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "unavailable"
+    assert response.json()["reason"] == "invalid_response"
 
 
 @pytest.mark.parametrize("runtime_url", ["https://example.com:11434", "http://ollama:11434"])
