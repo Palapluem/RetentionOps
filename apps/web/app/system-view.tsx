@@ -1,14 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { number, readData, type SystemData, shortDate, timestamp } from "../lib/data";
+import { type ReactNode, useEffect, useState } from "react";
+import {
+  createLocalInsight,
+  type LocalInsight,
+  number,
+  percent,
+  readData,
+  type SystemData,
+  shortDate,
+  timestamp,
+} from "../lib/data";
 import { Frame, RunHistoryTable } from "./workspace";
 
 type LoadState =
   | { kind: "loading" }
   | { kind: "error"; message: string }
   | { kind: "ready"; data: SystemData };
+
+type InsightState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "error"; message: string }
+  | { kind: "result"; data: LocalInsight };
+
+const insightReason: Record<NonNullable<LocalInsight["reason"]>, string> = {
+  no_publication: "Publish a local synthetic release before requesting an insight.",
+  publication_unavailable:
+    "The active publication could not be verified. Check System status first.",
+  runtime_unavailable: "The local Ollama runtime is not responding. The dashboard is unaffected.",
+  model_not_installed: "The configured model is not installed in the local Ollama runtime.",
+  timeout: "Local inference took too long. Retry after checking the Ollama runtime.",
+  runtime_busy: "Another local insight is being generated. Wait for it to finish.",
+  rate_limited: "Wait 10 seconds between local insight requests, then retry.",
+  invalid_response: "The local model returned an unsupported response. No insight was shown.",
+  unsafe_runtime_url: "The configured model endpoint is outside the approved local boundary.",
+};
 
 const artifactLabels: Record<SystemData["model_artifact_state"], string> = {
   not_published: "Awaiting publication",
@@ -18,6 +46,15 @@ const artifactLabels: Record<SystemData["model_artifact_state"], string> = {
   unavailable: "Could not verify",
 };
 
+function ScrollableTable({ children }: { children: ReactNode }) {
+  return (
+    // biome-ignore lint/a11y/noNoninteractiveTabindex: Overflowing tables require a keyboard focus target, verified by browser tests.
+    <section className="table-scroll" aria-label="Mature cohort denominators table" tabIndex={0}>
+      {children}
+    </section>
+  );
+}
+
 export default function SystemView() {
   const [revision, setRevision] = useState(0);
   return <SystemContent key={revision} refresh={() => setRevision((value) => value + 1)} />;
@@ -25,6 +62,7 @@ export default function SystemView() {
 
 function SystemContent({ refresh }: { refresh: () => void }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const [insight, setInsight] = useState<InsightState>({ kind: "idle" });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -66,6 +104,7 @@ function SystemContent({ refresh }: { refresh: () => void }) {
 
   const data = state.data;
   const active = data.active_release;
+  const quality = data.quality_summary;
   const ready = data.publication_state === "ready";
   const latest = data.runs[0];
   const attention =
@@ -99,6 +138,18 @@ function SystemContent({ refresh }: { refresh: () => void }) {
     },
     { name: "Read API", value: "Responding" },
   ];
+
+  const requestInsight = async () => {
+    setInsight({ kind: "loading" });
+    try {
+      setInsight({ kind: "result", data: await createLocalInsight() });
+    } catch (error) {
+      setInsight({
+        kind: "error",
+        message: error instanceof Error ? error.message : "Local insight is unavailable.",
+      });
+    }
+  };
 
   return (
     <Frame view="system" refresh={refresh} cutoff={data.score_cutoff ?? undefined}>
@@ -233,6 +284,175 @@ function SystemContent({ refresh }: { refresh: () => void }) {
           </p>
         </section>
       </div>
+
+      <section className="panel" aria-labelledby="data-quality-heading">
+        <div className="section-heading">
+          <div>
+            <h2 id="data-quality-heading">Data quality & model health</h2>
+            <p className="caption">Checks and metrics from the active synthetic release.</p>
+          </div>
+          <span className={`badge ${quality ? "low" : "neutral"}`}>
+            {quality ? "Release reconciled" : "No active release"}
+          </span>
+        </div>
+        {quality ? (
+          <>
+            <dl className="quality-metrics">
+              <div>
+                <dt>Source path</dt>
+                <dd>{quality.source_kind === "event_derived" ? "Event-derived" : "Snapshots"}</dd>
+                <dd className="quality-detail">
+                  {number(quality.source_rows)}{" "}
+                  {quality.source_kind === "event_derived" ? "event revisions" : "snapshot rows"}
+                </dd>
+              </div>
+              <div>
+                <dt>Feature rows</dt>
+                <dd>{number(quality.feature_rows)}</dd>
+                <dd className="quality-detail">
+                  {quality.excluded_rows === null
+                    ? "No exclusion counter on the snapshot path"
+                    : `${number(quality.eligible_rows)} eligible · ${number(quality.excluded_rows)} excluded`}
+                </dd>
+              </div>
+              <div>
+                <dt>Completeness</dt>
+                <dd>
+                  {quality.source_coverage_status === "verified" && quality.source_complete_through
+                    ? `Through ${shortDate(quality.source_complete_through)}`
+                    : "Watermark not declared"}
+                </dd>
+                <dd className="quality-detail">
+                  {quality.source_coverage_status === "verified" && quality.source_complete_through
+                    ? `Evaluation freeze ${shortDate(quality.evaluation_freeze)}`
+                    : `Label maturity verified at ${shortDate(quality.evaluation_freeze)}`}
+                </dd>
+              </div>
+              <div>
+                <dt>Test average precision</dt>
+                <dd>{quality.test_average_precision.toFixed(3)}</dd>
+                <dd className="quality-detail">
+                  Constant-prior reference {quality.baseline_average_precision.toFixed(3)}
+                </dd>
+              </div>
+              <div>
+                <dt>Test Brier score</dt>
+                <dd>{quality.test_brier.toFixed(3)}</dd>
+                <dd className="quality-detail">
+                  Lower is better for probabilistic calibration error
+                </dd>
+              </div>
+              <div>
+                <dt>Recall at 10% review capacity</dt>
+                <dd>{percent(quality.recall_at_10pct)}</dd>
+                <dd className="quality-detail">Historical synthetic holdout</dd>
+              </div>
+            </dl>
+            <ScrollableTable>
+              <table aria-label="Mature cohort denominators">
+                <thead>
+                  <tr>
+                    <th scope="col">Cutoff</th>
+                    <th scope="col">Partition</th>
+                    <th scope="col">Eligible</th>
+                    <th scope="col">Mature churned</th>
+                    <th scope="col">Observed churn</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quality.cohorts.map((cohort) => (
+                    <tr key={`${cohort.as_of_date}-${cohort.partition}`}>
+                      <td>{shortDate(cohort.as_of_date)}</td>
+                      <td>{cohort.partition}</td>
+                      <td>{number(cohort.eligible)}</td>
+                      <td>{number(cohort.churned)}</td>
+                      <td>{percent(cohort.churn_rate)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollableTable>
+            <p className="caption quality-footnote">
+              {number(quality.scored_rows)} selected-model test scores reconciled to the active
+              release; label maturity {quality.label_maturity_status}.{" "}
+              {quality.source_kind === "snapshot"
+                ? "The snapshot path does not declare an event completeness watermark."
+                : "The event path verifies that source completeness covers the evaluation freeze."}{" "}
+              Metrics describe historical synthetic data, not live outcomes.
+            </p>
+          </>
+        ) : (
+          <p className="empty-state">
+            Quality and model checks appear after the first valid local publication.
+          </p>
+        )}
+      </section>
+
+      <section className="panel local-insight" aria-labelledby="local-insight-heading">
+        <div className="section-heading">
+          <div>
+            <h2 id="local-insight-heading">Optional local AI insight</h2>
+            <p className="caption">
+              Ollama selects from verified aggregate observations. No customer-level records or
+              free-text prompt are sent.
+            </p>
+          </div>
+          <span className="badge neutral">Local model · no API key</span>
+        </div>
+        <button
+          type="button"
+          className="button primary"
+          onClick={requestInsight}
+          disabled={!quality || insight.kind === "loading"}
+        >
+          {insight.kind === "loading" ? "Generating locally…" : "Generate insight"}
+        </button>
+        {insight.kind === "idle" && (
+          <p className="caption insight-status">
+            This runs only when requested. Install the configured local model to enable it.
+          </p>
+        )}
+        {insight.kind === "loading" && (
+          <p className="caption insight-status" role="status" aria-live="polite">
+            Asking the local model to select evidence-based observations…
+          </p>
+        )}
+        {insight.kind === "error" && (
+          <p className="system-warning insight-status" role="alert">
+            {insight.message}
+          </p>
+        )}
+        {insight.kind === "result" &&
+          insight.data.status === "unavailable" &&
+          insight.data.reason && (
+            <p className="insight-status" role="status" aria-live="polite">
+              {insightReason[insight.data.reason]}
+            </p>
+          )}
+        {insight.kind === "result" && insight.data.status === "ready" && (
+          <div className="insight-result" role="status" aria-live="polite">
+            <ul>
+              {(insight.data.observations ?? []).map((observation) => (
+                <li key={observation.id}>{observation.text}</li>
+              ))}
+            </ul>
+            {insight.data.next_step && (
+              <p>
+                <strong>Suggested next check:</strong> {insight.data.next_step}
+              </p>
+            )}
+            <p className="caption">
+              Advisory only · {insight.data.model} · cutoff{" "}
+              {insight.data.score_cutoff ? shortDate(insight.data.score_cutoff) : "unknown"} ·
+              release <code>{insight.data.model_version}</code>
+            </p>
+            <p className="caption">
+              The local model chooses approved observations; RetentionOps renders their verified
+              values. No causal, ROI, or live-performance claim is produced.
+            </p>
+          </div>
+        )}
+      </section>
 
       <section className="panel">
         <div className="section-heading">

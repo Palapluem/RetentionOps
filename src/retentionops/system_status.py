@@ -9,7 +9,7 @@ from typing import Literal
 from . import serving
 from .data import sha256_file
 from .serving import Contract, ModelStatus, RunInfo
-from .storage import read_connection
+from .storage import active_manifest, read_connection
 
 
 class SourceTruth(Contract):
@@ -34,6 +34,7 @@ class SystemStatus(Contract):
     scored_customers: int | None
     score_cutoff: date | None
     active_release: ModelStatus | None
+    quality_summary: serving.DataQualitySummary | None
     model_artifact_state: Literal["not_published", "verified", "missing", "mismatch", "unavailable"]
     source_truth: SourceTruth
     infrastructure: LocalInfrastructure
@@ -57,6 +58,7 @@ def inspect_system(root: Path) -> SystemStatus:
     state = "empty"
     active = None
     overview = None
+    quality_summary = None
     runs = []
     path = root / "artifacts" / "serving.sqlite"
     if path.exists():
@@ -66,8 +68,10 @@ def inspect_system(root: Path) -> SystemStatus:
                 runs = history.items
                 if history.publication_present:
                     state = "unavailable"
-                    workspace = serving.workspace(conn, limit=1)
-                    active, overview = workspace.status, workspace.overview
+                    manifest = active_manifest(conn)
+                    overview = serving.overview(conn, manifest)
+                    active = serving.model_status(conn, manifest)
+                    quality_summary = serving.data_quality(conn, manifest)
                     state = "ready"
         except (sqlite3.Error, OSError, ValueError, KeyError, TypeError):
             state = "unavailable"
@@ -97,6 +101,7 @@ def inspect_system(root: Path) -> SystemStatus:
         scored_customers=overview.customers if overview else None,
         score_cutoff=overview.score_cutoff if overview else None,
         active_release=active,
+        quality_summary=quality_summary,
         model_artifact_state=(
             _artifact_state(root, active)
             if active

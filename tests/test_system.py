@@ -17,6 +17,7 @@ def test_empty_system_status_does_not_create_a_database(tmp_path):
     status = response.json()
     assert status["publication_state"] == "empty"
     assert status["active_release"] is None
+    assert status["quality_summary"] is None
     assert status["scored_customers"] is None
     assert status["model_artifact_state"] == "not_published"
     assert status["runs"] == []
@@ -119,6 +120,14 @@ def test_selected_lightgbm_release_agrees_across_api_views_and_pinned_detail(tmp
     assert system["model_artifact_state"] == "verified"
     assert system["scored_customers"] == 100
     assert system["score_cutoff"] == manifest["score_cutoff"]
+    quality = system["quality_summary"]
+    assert quality["source_kind"] == "snapshot"
+    assert quality["source_coverage_status"] == "not_declared"
+    assert quality["source_complete_through"] is None
+    assert quality["scored_rows"] == quality["test_cohort_rows"] == 100
+    assert quality["reconciliation_status"] == "verified"
+    assert quality["label_maturity_status"] == "verified"
+    assert sum(item["eligible"] for item in quality["cohorts"]) == quality["feature_rows"]
     assert system["source_truth"]["status"] == "simulated"
     assert system["source_truth"]["external_source_connected"] is False
     assert model["model_family"] == "lightgbm"

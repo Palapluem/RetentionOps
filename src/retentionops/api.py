@@ -8,11 +8,12 @@ import sqlite3
 from pathlib import Path
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi import Path as PathParam
 from fastapi.responses import HTMLResponse
 
 from . import __version__, serving
+from .local_ai import LocalInsight, generate_insight
 from .serving import Contract, CustomerDetail, ModelStatus, Overview, RiskPage, Workspace
 from .storage import active_manifest, read_connection
 from .system_status import SystemStatus, inspect_system
@@ -89,6 +90,16 @@ def create_app(root: Path | None = None) -> FastAPI:
     @application.get("/api/v1/system-status", response_model=SystemStatus)
     def system_status():
         return inspect_system(data_root)
+
+    @application.post("/api/v1/insights", response_model=LocalInsight)
+    def local_insight(
+        action: Annotated[str | None, Header(alias="X-RetentionOps-Local-Insight")] = None,
+    ):
+        # The server constructs the entire input from the active release; caller data is unused.
+        if action != "generate":
+            raise HTTPException(403, "Local insight must be requested through the same-origin UI")
+        system = inspect_system(data_root)
+        return generate_insight(system.quality_summary, system.publication_state)
 
     @application.get("/api/v1/customers/{customer_id}", response_model=CustomerDetail)
     def customer(

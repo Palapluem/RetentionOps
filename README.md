@@ -46,6 +46,39 @@ API/web healthchecks allow startup on a fresh volume, where System shows an empt
 Run the pipeline and refresh to inspect the published release. `/ready` remains the separate
 score-readiness check and returns 503 until a valid release exists.
 
+## Optional local AI insight (no API key)
+
+The System dashboard includes a user-triggered, advisory insight. Ollama runs the selected
+open model on this computer; RetentionOps sends only a small allowlist of synthetic cohort and
+model aggregates. The model can select approved observation IDs, while the API renders the
+verified values and wording. No free-text prompt, customer identifier, event row, or customer
+score is sent. Without Ollama or its model, the feature reports unavailable and the rest of the
+dashboard continues to work. The browser request is same-origin checked and sends no body; the
+API has a single inference slot and a short cooldown.
+
+For AI, run the API and web app natively using the [manual setup](#run-manually). The default
+Docker Compose path intentionally leaves Ollama disconnected; it does not expose the host model
+server or put model files in a container volume. On macOS, start Ollama in a separate terminal:
+
+```bash
+OLLAMA_NO_CLOUD=1 ollama serve
+ollama pull qwen3:4b-instruct
+```
+
+Then start the native API and web app following the manual setup, and select **Generate insight**
+on the System dashboard. The first model pull downloads about 2.5 GB and requires internet access;
+it does not require an account, API key, or hosted credits. The
+[Qwen3 4B instruct model](https://ollama.com/library/qwen3%3A4b-instruct) is listed under Apache
+2.0 at about 2.5 GB. Model files stay in the local Ollama directory outside Git and Docker.
+Native Ollama can use Apple Metal. The local API defaults to `http://127.0.0.1:11434`.
+
+The integration uses Ollama's documented [local chat API](https://docs.ollama.com/api/chat)
+and [local-only configuration](https://docs.ollama.com/faq).
+
+This is optional local inference, not a production AI service. Generated observations are
+advisory, use synthetic holdout metrics, and do not establish live performance, causation, or
+campaign ROI. See [local operations](docs/OPERATIONS.md) for enablement and failure behavior.
+
 ## Receive and replay a source in separate stages
 
 Run `retentionops events --customers 650` for the one-command synthetic demo; `retentionops all`

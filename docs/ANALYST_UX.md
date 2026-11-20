@@ -57,3 +57,12 @@ FastAPI validates inputs and response models. Types are generated from exported 
 No secrets/backend credentials enter browser bundles, no write actions or arbitrary URL
 proxying, and no external fonts/charts/analytics. Local and Compose ports bind to loopback.
 Verify responsive layout, contrast/keyboard flow and real API integration before accepting.
+
+The System view also shows active-release data-quality and selected-model health: source and
+feature counts, source-watermark state, eligible/excluded opportunities, mature cohort
+denominators and holdout metrics. Snapshot sources explicitly show that no event completeness
+watermark was declared. The optional local AI action accepts no browser prompt or record data;
+the API builds a minimal aggregate-only request for a private Ollama runtime. Ollama can only
+select approved observation/next-step IDs, and the API renders their values from the active
+release. The result is advisory, user-triggered and dispensable; it does not block dashboard
+use or make causal, ROI or live-performance claims.
