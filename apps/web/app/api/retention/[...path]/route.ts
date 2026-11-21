@@ -51,10 +51,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ pa
   if (path.length !== 1 || path[0] !== "insights") {
     return NextResponse.json({ detail: "Resource not found" }, { status: 404 });
   }
-  if (!insightHosts.has(request.headers.get("host") ?? "")) {
+  const host = request.headers.get("host");
+  if (host === null || !insightHosts.has(host)) {
     return NextResponse.json({ detail: "Local dashboard host required" }, { status: 403 });
   }
-  if (request.headers.get("origin") !== new URL(request.url).origin) {
+  // Next.js normalizes loopback URLs; compare the browser origin against the approved Host.
+  if (request.headers.get("origin") !== `http://${host}`) {
     return NextResponse.json({ detail: "Same-origin request required" }, { status: 403 });
   }
   const target = new URL(

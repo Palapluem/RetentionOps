@@ -103,6 +103,23 @@ test("local AI being unavailable leaves the System dashboard usable", async ({ p
   await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible();
 });
 
+test("the loopback dashboard can request an insight through the API proxy", async ({ page }) => {
+  await page.goto("/");
+  const result = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/retention/insights") && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Generate insight", exact: true }).click();
+  const response = await result;
+
+  expect(response.status()).toBe(200);
+  await expect(response.json()).resolves.toMatchObject({
+    status: "unavailable",
+    reason: "unsafe_runtime_url",
+  });
+  await expect(page.getByRole("status")).toContainText("outside the approved local boundary");
+});
+
 test("insight proxy rejects a cross-origin request before calling the API", async ({ request }) => {
   const response = await request.post("/api/retention/insights", {
     headers: { origin: "https://untrusted.example" },
