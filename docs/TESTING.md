@@ -13,10 +13,10 @@
 | Containers | Empty API/web startup → failed intake still visible → synthetic pipeline → shared-volume readiness; CI records actual result |
 | Cloud (planned) | Real job IDs, warehouse reconciliation, auth denial, query budget and rollback evidence |
 
-Run `bash scripts/local_smoke.sh` in the project venv. It is credential-free and generates
-synthetic outputs only. `pip-audit` needs network access to its advisory service; a network
-failure is not a passed security check. The tracked-file guard detects selected patterns and
-forbidden paths; it is not a comprehensive secret/security scanner.
+Run `bash scripts/local_smoke.sh` in the project venv. Set `RETENTIONOPS_ROOT` to a temporary
+directory to isolate the generated snapshot and event outputs. The default is the working
+directory. `pip-audit` needs network access to its advisory service. The tracked-file guard
+covers forbidden paths and selected credential patterns.
 
 Use tests for behavior and failure boundaries. Do not encode arbitrary target accuracy for
 synthetic data. Do not treat metadata validation as an independent raw-event leakage audit.
