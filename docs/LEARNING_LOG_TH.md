@@ -280,3 +280,38 @@ release ที่จัดเก็บไว้, วัน completeness ต้�
 เดิมต่อ โดยไม่เปลี่ยนงานที่ commit สำเร็จแล้ว ส่วน SIGKILL อาจทิ้งสถานะ running ไว้ จึง
 แสดงว่าเป็นสถานะล่าสุดที่บันทึก ไม่ใช่หลักฐานว่า process ยังทำงานอยู่ รายละเอียดการทดสอบ
 และขอบเขตอยู่ใน `docs/evidence/INTERRUPTION_AUDIT_2026-11-08.md`
+
+## 2026-11-20 — data quality และ AI ที่ไม่ต้องใช้ API key
+
+เพิ่มข้อมูลคุณภาพจาก active release ให้ System dashboard: แยก snapshot กับ event-derived,
+ตรวจ source coverage/label maturity, reconcile feature rows กับ scored rows และแสดง mature
+cohort denominators พร้อม holdout AP, constant-prior reference, Brier และ Recall@10% คำอธิบาย
+แยกจาก readiness/freshness SLA และย้ำว่าเป็น historical synthetic evidence
+
+เพื่อให้ใช้งาน AI ได้โดยไม่มีบัญชีหรือ hosted credits เลือก Ollama รัน Qwen3 4B instruct บน
+Mac แทนบริการ API แบบคิดค่า inference โมเดลถูกเก็บใน Ollama directory นอก repository และ
+เรียกเฉพาะ loopback เมื่อสั่งจากหน้า System ข้อมูลเข้าโมเดลเป็น allowlisted aggregate เท่านั้น;
+output เป็น observation/next-step IDs และ API สร้างข้อความจาก release ที่ตรวจแล้ว การไม่มี
+Ollama หรือ model ไม่ขวาง dashboard
+
+การตรวจอิสระแนะนำให้ตรึง Host ของ route เพิ่มเติมเพื่อรับมือ DNS rebinding จึงเพิ่ม allowlist
+loopback ports ที่ใช้จริงและ regression test ต่อมา E2E พบปัญหาโครงสร้าง definition list กับ
+ตารางเลื่อนที่ยังเข้า keyboard ไม่ได้ จึงปรับ semantic markup และรัน browser suite ซ้ำผ่าน
+รายละเอียด checks, ผล inference จริงในเครื่อง และขอบเขตการอ้างอิงอยู่ใน
+`docs/evidence/ROP-016_2026-11-20.md` ผลทั้งหมดใช้ข้อมูล synthetic; ยังไม่ใช่ผล KKBox,
+cloud/production deployment, campaign uplift หรือ business outcome
+
+## 2026-11-22 — ซ้อม replay จาก source และทดสอบปุ่ม AI ผ่านเว็บจริง
+
+ซ้อม pipeline ใน root ชั่วคราวจากไฟล์ synthetic สองชุด ตรวจว่า ingest ซ้ำใช้ source release
+เดิม การ publish คะแนนซ้ำคงข้อมูลเดิม และ replay สลับ release กลับได้ หลังรันด้วย source
+ที่ไม่มีอยู่ ระบบบันทึก failure และยังเสิร์ฟคะแนนจาก release ล่าสุดที่ผ่านการตรวจ
+
+การกด Generate insight ผ่าน Chromium พบว่า Next.js แปลง loopback URL ภายในเป็น
+`localhost` ทำให้ผู้ใช้ที่เปิดด้วย `127.0.0.1` ได้ 403 แก้ให้เทียบ Origin กับ Host ที่ผ่าน
+allowlist แล้ว และเพิ่มเทสต์ที่ผ่าน Next.js ไปถึง FastAPI ทดสอบ Qwen3 ในเครื่องผ่านปุ่ม
+เดียวกันได้ผลที่ตรงกับ release ในหน้า System
+
+ปรับ smoke script ให้ส่ง `--root` จาก `RETENTIONOPS_ROOT` ไปทั้งสองคำสั่ง CLI ตรวจผลใน
+root ชั่วคราวและเทียบ hash ของฐานข้อมูลใน repo ก่อนและหลัง ดูขั้นตอนและผลที่วัดได้ใน
+`docs/evidence/LOCAL_REPLAY_REVIEW_2026-11-22.md`

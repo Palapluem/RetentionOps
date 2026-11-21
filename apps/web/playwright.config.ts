@@ -19,7 +19,11 @@ export default defineConfig({
       command: "python -m uvicorn retentionops.api:app --host 127.0.0.1 --port 8100",
       cwd: root,
       url: "http://127.0.0.1:8100/health",
-      env: { RETENTIONOPS_ROOT: dataRoot },
+      env: {
+        RETENTIONOPS_ROOT: dataRoot,
+        // Keep browser checks independent of the developer's Ollama runtime.
+        RETENTIONOPS_OLLAMA_URL: "",
+      },
       reuseExistingServer: false,
     },
     {

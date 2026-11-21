@@ -331,6 +331,52 @@
         }
       }
     },
+    "/api/v1/insights": {
+      "post": {
+        "summary": "Local Insight",
+        "operationId": "local_insight_api_v1_insights_post",
+        "parameters": [
+          {
+            "name": "X-RetentionOps-Local-Insight",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Retentionops-Local-Insight"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalInsight"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/customers/{customer_id}": {
       "get": {
         "summary": "Customer",
@@ -546,6 +592,196 @@
         ],
         "title": "CustomerDetail"
       },
+      "DataQualitySummary": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "const": "SYNTHETIC",
+            "title": "Data Mode",
+            "default": "SYNTHETIC"
+          },
+          "source_release_id": {
+            "type": "string",
+            "title": "Source Release Id"
+          },
+          "model_version": {
+            "type": "string",
+            "title": "Model Version"
+          },
+          "source_kind": {
+            "type": "string",
+            "enum": [
+              "event_derived",
+              "snapshot"
+            ],
+            "title": "Source Kind"
+          },
+          "score_cutoff": {
+            "type": "string",
+            "format": "date",
+            "title": "Score Cutoff"
+          },
+          "evaluation_freeze": {
+            "type": "string",
+            "format": "date",
+            "title": "Evaluation Freeze"
+          },
+          "source_complete_through": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Complete Through"
+          },
+          "source_coverage_status": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "not_declared"
+            ],
+            "title": "Source Coverage Status"
+          },
+          "source_rows": {
+            "type": "integer",
+            "title": "Source Rows"
+          },
+          "source_event_revisions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Event Revisions"
+          },
+          "candidate_opportunities": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Opportunities"
+          },
+          "eligible_rows": {
+            "type": "integer",
+            "title": "Eligible Rows"
+          },
+          "excluded_rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excluded Rows"
+          },
+          "feature_rows": {
+            "type": "integer",
+            "title": "Feature Rows"
+          },
+          "scored_rows": {
+            "type": "integer",
+            "title": "Scored Rows"
+          },
+          "reconciliation_status": {
+            "type": "string",
+            "const": "verified",
+            "title": "Reconciliation Status"
+          },
+          "label_maturity_status": {
+            "type": "string",
+            "const": "verified",
+            "title": "Label Maturity Status"
+          },
+          "cohorts": {
+            "items": {
+              "$ref": "#/components/schemas/Cohort"
+            },
+            "type": "array",
+            "title": "Cohorts"
+          },
+          "test_cohort_rows": {
+            "type": "integer",
+            "title": "Test Cohort Rows"
+          },
+          "test_churned": {
+            "type": "integer",
+            "title": "Test Churned"
+          },
+          "test_churn_rate": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Test Churn Rate"
+          },
+          "test_average_precision": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Test Average Precision"
+          },
+          "baseline_average_precision": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Baseline Average Precision"
+          },
+          "test_brier": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Test Brier"
+          },
+          "recall_at_10pct": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Recall At 10Pct"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_release_id",
+          "model_version",
+          "source_kind",
+          "score_cutoff",
+          "evaluation_freeze",
+          "source_complete_through",
+          "source_coverage_status",
+          "source_rows",
+          "source_event_revisions",
+          "candidate_opportunities",
+          "eligible_rows",
+          "excluded_rows",
+          "feature_rows",
+          "scored_rows",
+          "reconciliation_status",
+          "label_maturity_status",
+          "cohorts",
+          "test_cohort_rows",
+          "test_churned",
+          "test_churn_rate",
+          "test_average_precision",
+          "baseline_average_precision",
+          "test_brier",
+          "recall_at_10pct"
+        ],
+        "title": "DataQualitySummary",
+        "description": "Aggregate-only source, maturity, reconciliation, and holdout facts."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -577,6 +813,34 @@
         "additionalProperties": false,
         "type": "object",
         "title": "Health"
+      },
+      "InsightObservation": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "event_coverage_verified",
+              "snapshot_watermark_not_declared",
+              "publication_reconciled",
+              "model_above_baseline",
+              "model_not_above_baseline",
+              "test_cohort_mature",
+              "exclusions_present"
+            ],
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "InsightObservation"
       },
       "JobPage": {
         "properties": {
@@ -624,6 +888,128 @@
         "additionalProperties": false,
         "type": "object",
         "title": "LocalInfrastructure"
+      },
+      "LocalInsight": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "source_release_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Release Id"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "score_cutoff": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score Cutoff"
+          },
+          "advisory_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Advisory Only",
+            "default": true
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/InsightObservation"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Observations"
+          },
+          "next_step": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Step"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "no_publication",
+                  "publication_unavailable",
+                  "runtime_unavailable",
+                  "model_not_installed",
+                  "timeout",
+                  "runtime_busy",
+                  "rate_limited",
+                  "invalid_response",
+                  "unsafe_runtime_url"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "generated_at",
+          "model",
+          "source_release_id",
+          "model_version",
+          "score_cutoff",
+          "next_step",
+          "reason"
+        ],
+        "title": "LocalInsight"
       },
       "ModelStatus": {
         "properties": {
@@ -1249,6 +1635,16 @@
               }
             ]
           },
+          "quality_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DataQualitySummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "model_artifact_state": {
             "type": "string",
             "enum": [
@@ -1283,6 +1679,7 @@
           "scored_customers",
           "score_cutoff",
           "active_release",
+          "quality_summary",
           "model_artifact_state",
           "source_truth",
           "infrastructure",

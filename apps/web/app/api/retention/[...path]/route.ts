@@ -10,6 +10,12 @@ const resources = new Set([
   "system-status",
 ]);
 const queries = new Set(["limit", "offset", "search", "band", "auto_renew", "model_version"]);
+const insightHosts = new Set([
+  "127.0.0.1:3000",
+  "localhost:3000",
+  "127.0.0.1:3100",
+  "localhost:3100",
+]);
 
 export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
@@ -35,6 +41,45 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pat
   } catch {
     return NextResponse.json(
       { detail: "Published data is unavailable. Retry after the data service recovers." },
+      { status: 503 },
+    );
+  }
+}
+
+export async function POST(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+  const { path } = await context.params;
+  if (path.length !== 1 || path[0] !== "insights") {
+    return NextResponse.json({ detail: "Resource not found" }, { status: 404 });
+  }
+  const host = request.headers.get("host");
+  if (host === null || !insightHosts.has(host)) {
+    return NextResponse.json({ detail: "Local dashboard host required" }, { status: 403 });
+  }
+  // Next.js normalizes loopback URLs; compare the browser origin against the approved Host.
+  if (request.headers.get("origin") !== `http://${host}`) {
+    return NextResponse.json({ detail: "Same-origin request required" }, { status: 403 });
+  }
+  const target = new URL(
+    "/api/v1/insights",
+    process.env.RETENTIONOPS_API_URL || "http://127.0.0.1:8000",
+  );
+  try {
+    // Discard caller input: the API builds its prompt from its own allowlisted aggregates.
+    const response = await fetch(target, {
+      method: "POST",
+      body: "{}",
+      headers: { "X-RetentionOps-Local-Insight": "generate" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(50_000),
+    });
+    const body = await response.json();
+    return NextResponse.json(body, {
+      status: response.status,
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch {
+    return NextResponse.json(
+      { detail: "Local insight is unavailable. The dashboard remains available." },
       { status: 503 },
     );
   }

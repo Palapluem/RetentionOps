@@ -10,6 +10,8 @@ test("home shows the actual local system release and source boundary", async ({
   const actual = await response.json();
   expect(actual.publication_state).toBe("ready");
   expect(actual.model_artifact_state).toBe("verified");
+  expect(actual.quality_summary.reconciliation_status).toBe("verified");
+  expect(actual.quality_summary.scored_rows).toBe(actual.scored_customers);
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "System dashboard", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "The active release is serving" })).toBeVisible();
@@ -26,6 +28,9 @@ test("home shows the actual local system release and source boundary", async ({
     page.getByText(`${actual.scored_customers} rows reconciled`, { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Simulated labels", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Data quality & model health" })).toBeVisible();
+  await expect(page.getByRole("table", { name: "Mature cohort denominators" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Generate insight" })).toBeEnabled();
   await expect(page.getByRole("definition").filter({ hasText: /^Not connected/ })).toBeVisible();
   await expect(page.getByRole("region", { name: "System pipeline attempts" })).toContainText(
     "succeeded",
@@ -36,6 +41,101 @@ test("home shows the actual local system release and source boundary", async ({
   const estimator =
     actual.active_release.model_family === "lightgbm" ? "LightGBM" : "Logistic Regression";
   await expect(page.locator(".evaluation .subtle-label")).toHaveText(estimator);
+});
+
+test("local AI insight is opt-in and displays only bounded advisory evidence", async ({
+  page,
+  request,
+}) => {
+  const system = await (await request.get("/api/retention/system-status")).json();
+  const quality = system.quality_summary;
+  await page.route("**/api/retention/insights", async (route) => {
+    expect(route.request().method()).toBe("POST");
+    expect(route.request().postData()).toBeNull();
+    await route.fulfill({
+      json: {
+        status: "ready",
+        generated_at: system.observed_at,
+        model: "qwen3:4b-instruct",
+        source_release_id: quality.source_release_id,
+        model_version: quality.model_version,
+        score_cutoff: quality.score_cutoff,
+        advisory_only: true,
+        observations: [
+          {
+            id: "test_cohort_mature",
+            text: `The evaluated test cohort has ${quality.test_cohort_rows} mature rows.`,
+          },
+        ],
+        next_step: "Review eligible and churned denominators across the cohorts.",
+        reason: null,
+      },
+    });
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Generate insight" }).click();
+  await expect(page.getByRole("status")).toContainText("mature rows");
+  await expect(page.getByRole("status")).toContainText("Advisory only");
+  await expect(page.getByRole("status")).not.toContainText("SYN-");
+});
+
+test("local AI being unavailable leaves the System dashboard usable", async ({ page }) => {
+  await page.route("**/api/retention/insights", (route) =>
+    route.fulfill({
+      json: {
+        status: "unavailable",
+        generated_at: "2026-11-20T00:00:00Z",
+        model: null,
+        source_release_id: null,
+        model_version: null,
+        score_cutoff: null,
+        advisory_only: true,
+        observations: [],
+        next_step: null,
+        reason: "runtime_unavailable",
+      },
+    }),
+  );
+  await page.goto("/");
+  await page.getByRole("button", { name: "Generate insight" }).click();
+  await expect(page.getByRole("status")).toContainText("local Ollama runtime is not responding");
+  await expect(page.getByRole("heading", { name: "Data quality & model health" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible();
+});
+
+test("the loopback dashboard can request an insight through the API proxy", async ({ page }) => {
+  await page.goto("/");
+  const result = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/retention/insights") && response.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Generate insight", exact: true }).click();
+  const response = await result;
+
+  expect(response.status()).toBe(200);
+  await expect(response.json()).resolves.toMatchObject({
+    status: "unavailable",
+    reason: "unsafe_runtime_url",
+  });
+  await expect(page.getByRole("status")).toContainText("outside the approved local boundary");
+});
+
+test("insight proxy rejects a cross-origin request before calling the API", async ({ request }) => {
+  const response = await request.post("/api/retention/insights", {
+    headers: { origin: "https://untrusted.example" },
+  });
+
+  expect(response.status()).toBe(403);
+  await expect(response.json()).resolves.toEqual({ detail: "Same-origin request required" });
+});
+
+test("insight proxy rejects a rebinding-style non-local Host", async ({ request }) => {
+  const response = await request.post("/api/retention/insights", {
+    headers: { host: "attacker.example", origin: "http://attacker.example" },
+  });
+
+  expect(response.status()).toBe(403);
+  await expect(response.json()).resolves.toEqual({ detail: "Local dashboard host required" });
 });
 
 test("system displays a first failed attempt before any publication", async ({ page, request }) => {

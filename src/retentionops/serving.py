@@ -2,7 +2,7 @@
 
 import json
 import math
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Annotated, Literal
 
 from fastapi import HTTPException
@@ -75,6 +75,114 @@ class CohortPage(Contract):
     model_version: str
     label_freeze: date
     items: list[Cohort]
+
+
+class DataQualitySummary(Contract):
+    """Aggregate-only source, maturity, reconciliation, and holdout facts."""
+
+    data_mode: Literal["SYNTHETIC"] = "SYNTHETIC"
+    source_release_id: str
+    model_version: str
+    source_kind: Literal["event_derived", "snapshot"]
+    score_cutoff: date
+    evaluation_freeze: date
+    source_complete_through: date | None
+    source_coverage_status: Literal["verified", "not_declared"]
+    source_rows: int
+    source_event_revisions: int | None
+    candidate_opportunities: int | None
+    eligible_rows: int
+    excluded_rows: int | None
+    feature_rows: int
+    scored_rows: int
+    reconciliation_status: Literal["verified"]
+    label_maturity_status: Literal["verified"]
+    cohorts: list[Cohort]
+    test_cohort_rows: int
+    test_churned: int
+    test_churn_rate: Probability
+    test_average_precision: Probability
+    baseline_average_precision: Probability
+    test_brier: Probability
+    recall_at_10pct: Probability
+
+
+def data_quality(conn, manifest):
+    """Reconcile one immutable publication and expose only cohort-level facts."""
+    result = overview(conn, manifest)
+    cohort_page = cohorts(conn, manifest)
+    source = manifest["source"]
+    quality = source.get("quality", {})
+    events = source.get("events")
+    if events:
+        source_kind = "event_derived"
+        source_rows = events["rows"]
+        complete_through = date.fromisoformat(events["complete_through"])
+        evaluation_freeze = date.fromisoformat(manifest["evaluation_freeze"])
+        latest_label_cutoff = max(item.as_of_date for item in cohort_page.items)
+        if (
+            complete_through < evaluation_freeze
+            or evaluation_freeze < latest_label_cutoff + timedelta(days=30)
+        ):
+            raise ValueError(
+                "Published source does not cover its evaluation freeze and mature labels"
+            )
+        coverage_status = "verified"
+        source_event_revisions = events["rows"]
+        candidate_opportunities = quality.get("candidate_opportunities")
+        eligible_rows = quality.get("eligible_rows", source["rows"])
+        excluded_rows = quality.get("excluded_no_known_subscription", 0)
+        if (
+            eligible_rows != source["rows"]
+            or candidate_opportunities != eligible_rows + excluded_rows
+            or quality.get("freeze") != str(evaluation_freeze)
+            or quality.get("complete_through") != complete_through.isoformat()
+        ):
+            raise ValueError("Published source quality counts or temporal lineage do not reconcile")
+    else:
+        source_kind = "snapshot"
+        source_rows = source["rows"]
+        complete_through = None
+        evaluation_freeze = date.fromisoformat(manifest["evaluation_freeze"])
+        coverage_status = "not_declared"
+        source_event_revisions = None
+        candidate_opportunities = None
+        eligible_rows = source["rows"]
+        excluded_rows = None
+
+    test_cohort = next((item for item in cohort_page.items if item.partition == "test"), None)
+    if test_cohort is None:
+        raise ValueError("Published release has no mature test cohort")
+    test_metrics = manifest["metrics"]["test"]
+    selected_metrics = test_metrics.get("selected_model", test_metrics.get("logistic_regression"))
+    if selected_metrics is None:
+        raise ValueError("Published release has no selected-model test metrics")
+    return DataQualitySummary(
+        source_release_id=source["source_release_id"],
+        model_version=manifest["model_version"],
+        source_kind=source_kind,
+        score_cutoff=result.score_cutoff,
+        evaluation_freeze=evaluation_freeze,
+        source_complete_through=complete_through,
+        source_coverage_status=coverage_status,
+        source_rows=source_rows,
+        source_event_revisions=source_event_revisions,
+        candidate_opportunities=candidate_opportunities,
+        eligible_rows=eligible_rows,
+        excluded_rows=excluded_rows,
+        feature_rows=sum(item.eligible for item in cohort_page.items),
+        scored_rows=result.customers,
+        reconciliation_status="verified",
+        label_maturity_status="verified",
+        cohorts=cohort_page.items,
+        test_cohort_rows=test_cohort.eligible,
+        test_churned=test_cohort.churned,
+        test_churn_rate=test_cohort.churn_rate,
+        test_average_precision=selected_metrics["average_precision"],
+        baseline_average_precision=test_metrics["constant_prior"]["average_precision"],
+        test_brier=selected_metrics["brier"],
+        recall_at_10pct=selected_metrics["recall_at_10pct"],
+    )
 
 
 class RunInfo(Contract):
